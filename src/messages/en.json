@@ -1,0 +1,43 @@
+{
+  "Metadata": {
+    "title": "Dots Arcade",
+    "description": "A small collection of browser mini-games"
+  },
+  "HomePage": {
+    "title": "Mini games",
+    "subtitle": "Choose a game — more coming soon",
+    "openGame": "Play"
+  },
+  "GamePage": {
+    "back": "All games",
+    "comingSoon": "This game is not ready yet. Check back later."
+  },
+  "LocaleSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "ru": "Russian"
+  },
+  "ThemeSwitcher": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "games": {
+    "dots": {
+      "name": "Dots & Boxes",
+      "description": "Close the most boxes on the grid"
+    },
+    "memory": {
+      "name": "Memory",
+      "description": "Match pairs of hidden cards"
+    },
+    "snake": {
+      "name": "Snake",
+      "description": "Grow the snake without hitting the walls"
+    },
+    "tic-tac-toe": {
+      "name": "Tic-tac-toe",
+      "description": "Classic three in a row"
+    }
+  }
+}

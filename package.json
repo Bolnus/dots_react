@@ -2,20 +2,26 @@
   "name": "dots_react",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev -p 80",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
     "@next/eslint-plugin-next": "^16.2.4",
     "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.4",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-jsdoc": "^62.9.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-prettier": "^5.5.5",
@@ -25,5 +31,11 @@
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1"
+  },
+  "dependencies": {
+    "next": "^16.2.4",
+    "next-intl": "^4.11.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   }
 }

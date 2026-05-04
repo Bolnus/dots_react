@@ -20,25 +20,17 @@ export default defineConfig([
   jsxA11yPlugin.flatConfigs.recommended,
   reactPlugin.configs.flat.recommended,
   reactPlugin.configs.flat["jsx-runtime"],
-  reactHooksPlugin.configs["recommended-latest"],
+  reactHooksPlugin.configs.flat["recommended-latest"],
   sonarjsPlugin.configs.recommended,
   nextPlugin.configs["core-web-vitals"],
   prettier,
-  globalIgnores([
-    "*.json",
-    "node_modules/*",
-    "*.mjs",
-    "*.cjs",
-    ".next/*",
-    "reverse-proxy/*"
-  ]),
+  globalIgnores(["*.json", "node_modules/*", "*.mjs", "*.cjs", ".next/*", "reverse-proxy/*"]),
   {
     languageOptions: {
       ecmaVersion: 2022,
       parser: typescriptParser,
       parserOptions: {
         projectService: true,
-        project: "tsconfig.json",
         tsconfigRootDir: import.meta.dirname
         // project: 'tsconfig.json',
         // tsconfigRootDir: '.'
@@ -57,12 +49,11 @@ export default defineConfig([
       react: reactPlugin,
       jsdoc: jsdocPlugin
     },
-    // settings: {
-    //   // "import/resolver": { typescript: { alwaysTryTypes: true } },
-    //   react: {
-    //     version: "detect"
-    //   }
-    // },
+    settings: {
+      react: {
+        version: "detect"
+      }
+    },
     // ignores: ['eslint.config.*', '*.json', 'node_modules/*'],
     rules: {
       // ESLint базовые правила:
@@ -181,8 +172,16 @@ export default defineConfig([
       "jsx-a11y/no-static-element-interactions": "off",
 
       // JSDOC
-      "jsdoc/require-jsdoc": "off",
+      "jsdoc/require-jsdoc": "warn",
       "jsdoc/no-types": "warn",
+      "jsdoc/multiline-blocks": [
+        "warn",
+        {
+          noMultilineBlocks: true,
+          minimumLengthForMultiline: 100,
+          allowMultipleTags: false
+        }
+      ],
 
       // Import:
       // "import/order": [

@@ -5,8 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { routing } from "@/FSD/shared/lib/i18n/routing";
 import { Link, usePathname } from "@/FSD/shared/lib/i18n/navigation";
-
-import styles from "./LocaleSwitcher.module.css";
+import { SegmentedControl, segmentedItemClassName } from "@/FSD/shared/ui/segmented-control/SegmentedControl";
 
 /** Switches UI language while keeping the current path (no locale prefix in `href`). */
 export function LocaleSwitcher(): ReactElement {
@@ -15,18 +14,18 @@ export function LocaleSwitcher(): ReactElement {
   const t = useTranslations("LocaleSwitcher");
 
   return (
-    <div className={styles.root} role="group" aria-label={t("label")}>
+    <SegmentedControl ariaLabel={t("label")}>
       {routing.locales.map((loc) => (
         <Link
           key={loc}
           href={pathname}
           locale={loc}
-          className={loc === locale ? styles.active : styles.link}
+          className={segmentedItemClassName(loc === locale)}
           prefetch={false}
         >
           {t(loc)}
         </Link>
       ))}
-    </div>
+    </SegmentedControl>
   );
 }

@@ -6,8 +6,8 @@ import { notFound } from "next/navigation";
 
 import { routing } from "@/FSD/shared/lib/i18n/routing";
 import "@/FSD/app/styles/globals.css";
-import { ThemeScript } from "@/FSD/shared/lib/theme/ThemeScript";
 import { AppHeader } from "@/FSD/widgets/app-header/ui/AppHeader";
+import Script from "next/script";
 
 type LocaleLayoutProps = Readonly<{
   children: ReactNode;
@@ -47,7 +47,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        <ThemeScript />
+        <Script id="theme-init" src="/theme-init.js" strategy="beforeInteractive" />
       </head>
       <body>
         <NextIntlClientProvider messages={messages}>

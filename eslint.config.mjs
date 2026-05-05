@@ -24,7 +24,7 @@ export default defineConfig([
   sonarjsPlugin.configs.recommended,
   nextPlugin.configs["core-web-vitals"],
   prettier,
-  globalIgnores(["*.json", "node_modules/*", "*.mjs", "*.cjs", ".next/*", "reverse-proxy/*"]),
+  globalIgnores(["*.json", "node_modules/*", "*.mjs", "*.cjs", ".next/*", "reverse-proxy/*", "public/**"]),
   {
     languageOptions: {
       ecmaVersion: 2022,

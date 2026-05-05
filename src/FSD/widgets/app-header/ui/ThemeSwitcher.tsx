@@ -5,8 +5,7 @@ import { useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { THEME_DARK, THEME_LIGHT, THEME_STORAGE_KEY } from "@/FSD/shared/lib/theme/constants";
-
-import styles from "./ThemeSwitcher.module.css";
+import { SegmentedControl, segmentedItemClassName } from "@/FSD/shared/ui/segmented-control/SegmentedControl";
 
 export type ThemeName = typeof THEME_LIGHT | typeof THEME_DARK;
 
@@ -20,7 +19,7 @@ function readThemeFromHtml(): ThemeName {
   return value === THEME_LIGHT ? THEME_LIGHT : THEME_DARK;
 }
 
-/** Processes theme storage updates and applies the new theme */
+/** Applies theme from a storage event and notifies listeners. */
 function processThemeStorageUpdate(event: StorageEvent, onChange: () => void): void {
   if (event.key !== THEME_STORAGE_KEY || !event.newValue) {
     return;
@@ -72,10 +71,10 @@ export function ThemeSwitcher(): ReactElement {
   };
 
   return (
-    <div className={styles.root} role="group" aria-label={t("label")}>
+    <SegmentedControl ariaLabel={t("label")}>
       <button
         type="button"
-        className={theme === THEME_LIGHT ? styles.active : styles.btn}
+        className={segmentedItemClassName(theme === THEME_LIGHT)}
         onClick={() => commitTheme(THEME_LIGHT)}
         aria-pressed={theme === THEME_LIGHT}
       >
@@ -83,12 +82,12 @@ export function ThemeSwitcher(): ReactElement {
       </button>
       <button
         type="button"
-        className={theme === THEME_DARK ? styles.active : styles.btn}
+        className={segmentedItemClassName(theme === THEME_DARK)}
         onClick={() => commitTheme(THEME_DARK)}
         aria-pressed={theme === THEME_DARK}
       >
         {t("dark")}
       </button>
-    </div>
+    </SegmentedControl>
   );
 }

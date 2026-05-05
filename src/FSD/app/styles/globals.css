@@ -10,14 +10,14 @@
   --accent-glow: rgba(108, 159, 255, 0.35);
   --radius-lg: 16px;
   --radius-md: 12px;
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 28px rgba(108, 159, 255, 0.18);
   --font-sans: system-ui, -apple-system, "Segoe UI", roboto, ubuntu, sans-serif;
   --body-gradient-1: rgba(108, 159, 255, 0.12);
   --body-gradient-2: rgba(108, 159, 255, 0.06);
   --control-hover-bg: rgba(255, 255, 255, 0.06);
   --control-active-bg: rgba(108, 159, 255, 0.18);
   --image-wrap-gradient: linear-gradient(145deg, #1e2433 0%, #12151c 100%);
-  --card-hover-extra-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  --card-hover-extra-shadow: 0 18px 48px rgba(0, 0, 0, 0.45), 0 0 48px rgba(108, 159, 255, 0.28);
 }
 
 html[data-theme="light"] {

@@ -67,11 +67,68 @@ export function ringFromChainPath(path: readonly GridPoint[]): GridPoint[] {
   return path.slice(0, -1);
 }
 
+/** True when `p` is one of the ring vertices (outline dots). */
+function isRingVertex(p: GridPoint, ring: readonly GridPoint[]): boolean {
+  for (const v of ring) {
+    if (v.r === p.r && v.c === p.c) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * True when `p` lies on the closed segment between `a` and `b` on the integer grid.
+ * Edges can be orthogonal, diagonal, or longer collinear runs (because vertices may skip cells).
+ */
+function gridPointOnClosedSegment(p: GridPoint, a: GridPoint, b: GridPoint): boolean {
+  const cross = (b.c - a.c) * (p.r - a.r) - (b.r - a.r) * (p.c - a.c);
+  if (cross !== 0) {
+    return false;
+  }
+  const minC = Math.min(a.c, b.c);
+  const maxC = Math.max(a.c, b.c);
+  const minR = Math.min(a.r, b.r);
+  const maxR = Math.max(a.r, b.r);
+  return p.c >= minC && p.c <= maxC && p.r >= minR && p.r <= maxR;
+}
+
+/** True when `p` lies on any edge of the polygon ring. */
+function gridPointOnPolygonBoundary(p: GridPoint, ring: readonly GridPoint[]): boolean {
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % n];
+    if (gridPointOnClosedSegment(p, a, b)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Captured/painted point definition (Qt-like):
+ * - any point strictly inside OR lying on the boundary is non-interactable,
+ * - except the ring vertices themselves (player’s dots forming the outline).
+ */
+export function isCapturedByPolygon(p: GridPoint, ring: readonly GridPoint[]): boolean {
+  if (ring.length < 3) {
+    console.log('ring.length', ring.length)
+    return false;
+  }
+  if (isRingVertex(p, ring)) {
+    console.log('isRingVertex')
+    return false;
+  }
+  console.log('pointInPolygon(p, ring)=', pointInPolygon(p, ring), 'gridPointOnPolygonBoundary(p, ring)=', gridPointOnPolygonBoundary(p, ring))
+  return pointInPolygon(p, ring) || gridPointOnPolygonBoundary(p, ring);
+}
+
 export type CaptureResult = Readonly<{
   ring: GridPoint[];
   /** Opponent dots that contribute to score. */
   scoredDots: GridPoint[];
-  /** Cells that become blocked (opponent dots + empty inside). */
+  /** Cells that become blocked (captured area; excludes ring vertices). */
   blockedCells: GridPoint[];
 }>;
 
@@ -91,15 +148,13 @@ export function computeCapture(
   for (let r = 0; r < cells.length; r++) {
     for (let c = 0; c < cells[r].length; c++) {
       const p: GridPoint = { r, c };
-      if (!pointInPolygon(p, ring)) {
+      if (!isCapturedByPolygon(p, ring)) {
         continue;
       }
       const cell = cells[r][c];
+      blockedCells.push(p);
       if (cell.owner === opponent) {
         scoredDots.push(p);
-        blockedCells.push(p);
-      } else if (cell.owner === null) {
-        blockedCells.push(p);
       }
     }
   }

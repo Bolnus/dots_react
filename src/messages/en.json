@@ -22,10 +22,25 @@
     "light": "Light",
     "dark": "Dark"
   },
+  "DotsGame": {
+    "player0": "Player 1 (blue)",
+    "player1": "Player 2 (red)",
+    "statusLabel": "Turn:",
+    "turnPlace": "{player} places a dot",
+    "turnDrawing": "Complete the enclosure: click adjacent dots of your color and return to the start",
+    "turnEnded": "Game over",
+    "rulesShort": "LMB: place a dot. RMB: place and start an enclosure — click neighboring dots of your color in a loop, finishing on the starting dot. Valid loops that surround opponent dots score and block those points. Esc or Undo: cancel drawing or remove the last dot. Clear: new game. Surrender ends the match.",
+    "undo": "Undo",
+    "clear": "Clear",
+    "surrender": "Surrender",
+    "boardAria": "Dots game grid",
+    "resultSurrender": "{winner} wins (opponent surrendered).",
+    "resultWin": "{winner} wins."
+  },
   "games": {
     "dots": {
-      "name": "Dots & Boxes",
-      "description": "Close the most boxes on the grid"
+      "name": "Dots",
+      "description": "Surround opponent dots with your polygons to score"
     },
     "memory": {
       "name": "Memory",

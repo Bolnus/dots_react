@@ -1,0 +1,122 @@
+import type { CellState, DotsGameConfig, GridPoint, PlayerId } from "./types";
+
+/** King-neighbour (8-connected), matching Qt distance < sqrt(2)*scale + 1 on a square grid. */
+export function areNeighbourCells(a: GridPoint, b: GridPoint): boolean {
+  const dr = Math.abs(a.r - b.r);
+  const dc = Math.abs(a.c - b.c);
+  return dr <= 1 && dc <= 1 && !(dr === 0 && dc === 0);
+}
+
+/** Creates a fresh grid with empty, unblocked cells. */
+export function createEmptyGrid(config: DotsGameConfig): CellState[][] {
+  return Array.from({ length: config.rows }, () =>
+    Array.from({ length: config.cols }, () => ({ owner: null, blocked: false }))
+  );
+}
+
+/** Default board dimensions, aligned with the Qt grid spacing concept. */
+export function defaultDotsConfig(): DotsGameConfig {
+  return { rows: 23, cols: 31, cellSizePx: 20 };
+}
+
+/** Copies the 2D grid so reducer updates remain immutable. */
+function cloneGrid(cells: CellState[][]): CellState[][] {
+  return cells.map((row) => row.map((cell) => ({ ...cell })));
+}
+
+/**
+ * Non-zero winding rule; ring is closed implicitly (last vertex → first).
+ * Half-integer test point avoids many vertex/ray degeneracies on the integer grid.
+ */
+export function pointInPolygon(test: GridPoint, polygonRing: readonly GridPoint[]): boolean {
+  if (polygonRing.length < 3) {
+    return false;
+  }
+  const x = test.c + 0.5;
+  const y = test.r + 0.5;
+  let wn = 0;
+  const n = polygonRing.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const yi = polygonRing[i].r;
+    const xi = polygonRing[i].c;
+    const yj = polygonRing[j].r;
+    const xj = polygonRing[j].c;
+    const cross = (xj - xi) * (y - yi) - (x - xi) * (yj - yi);
+    if (yi <= y) {
+      if (yj > y && cross > 0) {
+        wn++;
+      }
+    } else if (yj <= y && cross < 0) {
+      wn--;
+    }
+  }
+  return wn !== 0;
+}
+
+/** Closed ring without repeating the first vertex at the end. */
+export function ringFromChainPath(path: readonly GridPoint[]): GridPoint[] {
+  if (path.length < 4) {
+    return [];
+  }
+  const [first] = path;
+  const last = path[path.length - 1];
+  if (first.r !== last.r || first.c !== last.c) {
+    return [];
+  }
+  return path.slice(0, -1);
+}
+
+export type CaptureResult = Readonly<{
+  ring: GridPoint[];
+  /** Opponent dots that contribute to score. */
+  scoredDots: GridPoint[];
+  /** Cells that become blocked (opponent dots + empty inside). */
+  blockedCells: GridPoint[];
+}>;
+
+/** Finds opponent dots inside the ring and returns the capture (or null if no score). */
+export function computeCapture(
+  cells: CellState[][],
+  ring: readonly GridPoint[],
+  capturer: PlayerId
+): CaptureResult | null {
+  if (ring.length < 3) {
+    return null;
+  }
+  const opponent: PlayerId = capturer === 0 ? 1 : 0;
+  const scoredDots: GridPoint[] = [];
+  const blockedCells: GridPoint[] = [];
+
+  for (let r = 0; r < cells.length; r++) {
+    for (let c = 0; c < cells[r].length; c++) {
+      const p: GridPoint = { r, c };
+      if (!pointInPolygon(p, ring)) {
+        continue;
+      }
+      const cell = cells[r][c];
+      if (cell.owner === opponent) {
+        scoredDots.push(p);
+        blockedCells.push(p);
+      } else if (cell.owner === null) {
+        blockedCells.push(p);
+      }
+    }
+  }
+
+  if (scoredDots.length === 0) {
+    return null;
+  }
+
+  return { ring: [...ring], scoredDots, blockedCells };
+}
+
+/** Marks all cells inside the capture as blocked (including empty intersections). */
+export function applyCapture(grid: CellState[][], capture: CaptureResult): CellState[][] {
+  const next = cloneGrid(grid);
+  for (const { r, c } of capture.blockedCells) {
+    const cell = next[r][c];
+    next[r][c] = { owner: cell.owner, blocked: true };
+  }
+  return next;
+}

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { GAMES, isGameId } from "@/FSD/entities/game/model/games";
+import { DotsGame } from "@/FSD/features/dots-game/ui/DotsGame";
 import { Link } from "@/FSD/shared/lib/i18n/navigation";
 import { GamePageView } from "@/FSD/pages/game/ui/GamePageView";
 
@@ -50,6 +51,21 @@ export default async function GamePage({ params }: GamePageProps): Promise<React
   const tPage = await getTranslations("GamePage");
   const tGames = await getTranslations("games");
   const title = tGames(`${slug}.name`);
+
+  if (slug === "dots") {
+    return (
+      <GamePageView
+        backLink={
+          <Link href="/" prefetch={false}>
+            {tPage("back")}
+          </Link>
+        }
+        title={title}
+      >
+        <DotsGame />
+      </GamePageView>
+    );
+  }
 
   return (
     <GamePageView

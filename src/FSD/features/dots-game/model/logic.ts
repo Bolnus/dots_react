@@ -26,22 +26,23 @@ function cloneGrid(cells: CellState[][]): CellState[][] {
 
 /**
  * Non-zero winding rule; ring is closed implicitly (last vertex → first).
- * Half-integer test point avoids many vertex/ray degeneracies on the integer grid.
+ * Vertices and test point use cell centers (c+0.5, r+0.5) mapped to y-up Cartesian
+ * (`r` grows downward on the board, so y = -(r+0.5)) so winding matches Euclidean inside/outside.
  */
 export function pointInPolygon(test: GridPoint, polygonRing: readonly GridPoint[]): boolean {
   if (polygonRing.length < 3) {
     return false;
   }
   const x = test.c + 0.5;
-  const y = test.r + 0.5;
+  const y = -(test.r + 0.5);
   let wn = 0;
   const n = polygonRing.length;
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
-    const yi = polygonRing[i].r;
-    const xi = polygonRing[i].c;
-    const yj = polygonRing[j].r;
-    const xj = polygonRing[j].c;
+    const yi = -(polygonRing[i].r + 0.5);
+    const xi = polygonRing[i].c + 0.5;
+    const yj = -(polygonRing[j].r + 0.5);
+    const xj = polygonRing[j].c + 0.5;
     const cross = (xj - xi) * (y - yi) - (x - xi) * (yj - yi);
     if (yi <= y) {
       if (yj > y && cross > 0) {
@@ -77,22 +78,89 @@ function isRingVertex(p: GridPoint, ring: readonly GridPoint[]): boolean {
   return false;
 }
 
-/**
- * Captured/painted point definition (Qt-like):
- * - any point strictly inside the polygon is non-interactable,
- * - except the ring vertices themselves (player’s dots forming the outline).
- *
- * Since we only allow polygon edges between neighbouring dots (8-connected),
- * a boundary grid point is always a vertex, so explicit boundary checks are unnecessary.
- */
-export function isCapturedByPolygon(p: GridPoint, ring: readonly GridPoint[]): boolean {
+/** Stable map key for a board intersection. */
+function dotKey(r: number, c: number): string {
+  return `${r},${c}`;
+}
+
+/** True if `p` lies on the closed segment between `a` and `b` (integer grid). */
+function isGridPointOnClosedSegment(p: GridPoint, a: GridPoint, b: GridPoint): boolean {
+  if (a.r === b.r && a.c === b.c) {
+    return p.r === a.r && p.c === a.c;
+  }
+  const cross = (b.c - a.c) * (p.r - a.r) - (b.r - a.r) * (p.c - a.c);
+  if (cross !== 0) {
+    return false;
+  }
+  return (
+    p.r >= Math.min(a.r, b.r) &&
+    p.r <= Math.max(a.r, b.r) &&
+    p.c >= Math.min(a.c, b.c) &&
+    p.c <= Math.max(a.c, b.c)
+  );
+}
+
+function isOnPolygonBoundary(p: GridPoint, ring: readonly GridPoint[]): boolean {
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    if (isGridPointOnClosedSegment(p, ring[i], ring[(i + 1) % n])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Dot is strictly inside the polygon: winding contains cell center, not on an edge or vertex. */
+function isStrictlyInteriorDot(p: GridPoint, ring: readonly GridPoint[]): boolean {
   if (ring.length < 3) {
     return false;
   }
   if (isRingVertex(p, ring)) {
     return false;
   }
+  if (isOnPolygonBoundary(p, ring)) {
+    return false;
+  }
   return pointInPolygon(p, ring);
+}
+
+/**
+ * Strictly interior dots: geometric interior (non-zero winding at cell center), excluding boundary lattice points.
+ */
+function computeInteriorDotKeys(ring: readonly GridPoint[], dotRows: number, dotCols: number): Set<string> {
+  const interior = new Set<string>();
+  if (ring.length < 3 || dotRows < 1 || dotCols < 1) {
+    return interior;
+  }
+
+  for (let r = 0; r < dotRows; r++) {
+    for (let c = 0; c < dotCols; c++) {
+      const p: GridPoint = { r, c };
+      if (isStrictlyInteriorDot(p, ring)) {
+        interior.add(dotKey(r, c));
+      }
+    }
+  }
+
+  return interior;
+}
+
+/**
+ * True when the dot lies in the strictly interior region of the ring (not on an edge or vertex).
+ */
+export function isCapturedByPolygon(
+  p: GridPoint,
+  ring: readonly GridPoint[],
+  dotRows: number,
+  dotCols: number
+): boolean {
+  if (ring.length < 3) {
+    return false;
+  }
+  if (isRingVertex(p, ring)) {
+    return false;
+  }
+  return computeInteriorDotKeys(ring, dotRows, dotCols).has(dotKey(p.r, p.c));
 }
 
 export type CaptureResult = Readonly<{
@@ -112,16 +180,21 @@ export function computeCapture(
   if (ring.length < 3) {
     return null;
   }
+  const dotRows = cells.length;
+  const dotCols = cells[0]?.length ?? 0;
+  const interiorKeys = computeInteriorDotKeys(ring, dotRows, dotCols);
+  console.log(interiorKeys)
+
   const opponent: PlayerId = capturer === "player0" ? "player1" : "player0";
   const scoredDots: GridPoint[] = [];
   const blockedCells: GridPoint[] = [];
 
-  for (let r = 0; r < cells.length; r++) {
-    for (let c = 0; c < cells[r].length; c++) {
-      const p: GridPoint = { r, c };
-      if (!isCapturedByPolygon(p, ring)) {
+  for (let r = 0; r < dotRows; r++) {
+    for (let c = 0; c < dotCols; c++) {
+      if (!interiorKeys.has(dotKey(r, c))) {
         continue;
       }
+      const p: GridPoint = { r, c };
       const cell = cells[r][c];
       blockedCells.push(p);
       if (cell.owner === opponent) {

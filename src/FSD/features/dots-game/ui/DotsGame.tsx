@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 
 import { useDotsGame } from "../model/useDotsGame";
-import type { CellState, FilledPolygon, GridPoint } from "../model/types";
+import type { CellState, FilledPolygon, GridPoint, PlayerId } from "../model/types";
 
 import styles from "./DotsGame.module.css";
 
@@ -34,10 +34,10 @@ function hitTestGrid(args: HitTestArgs): GridPoint | null {
 
 /** Selects a dot CSS class based on ownership / blocked status. */
 function dotClassForCell(cell: CellState): string {
-  if (cell.owner === 0) {
+  if (cell.owner === "player0") {
     return styles.dotP0;
   }
-  if (cell.owner === 1) {
+  if (cell.owner === "player1") {
     return styles.dotP1;
   }
   return styles.dotBlockedEmpty;
@@ -141,7 +141,7 @@ function buildPolygonData(polygons: readonly FilledPolygon[], cellSizePx: number
   return polygons.map((poly: FilledPolygon) => ({
     key: polygonDomKey(poly.ring),
     points: poly.ring.map((p: GridPoint) => `${p.c * cellSizePx},${p.r * cellSizePx}`).join(" "),
-    fill: poly.owner === 0 ? "var(--dots-p0)" : "var(--dots-p1)"
+    fill: poly.owner === "player0" ? "var(--dots-p0)" : "var(--dots-p1)"
   }));
 }
 
@@ -198,13 +198,13 @@ function formatTurnLabel(
 /** Formats the winner overlay string, including surrender messaging. */
 function formatWinnerText(
   t: ReturnType<typeof useTranslations>,
-  winner: 0 | 1 | null,
-  surrenderedBy: 0 | 1 | null
+  winner: PlayerId | null,
+  surrenderedBy: PlayerId | null
 ): string | null {
   if (winner === null) {
     return null;
   }
-  const winnerName = winner === 0 ? t("player0") : t("player1");
+  const winnerName = winner === "player0" ? t("player0") : t("player1");
   if (surrenderedBy !== null) {
     return t("resultSurrender", { winner: winnerName });
   }
@@ -234,7 +234,7 @@ export function DotsGame(): ReactElement {
     };
   }, [undo]);
 
-  const currentPlayerName = currentPlayer === 0 ? t("player0") : t("player1");
+  const currentPlayerName = currentPlayer === "player0" ? t("player0") : t("player1");
   const turnLabel = formatTurnLabel(t, mode, currentPlayerName);
   const winnerText = formatWinnerText(t, winner, surrenderedBy);
 
@@ -254,10 +254,10 @@ export function DotsGame(): ReactElement {
       <div className={styles.toolbar}>
         <div className={styles.scores}>
           <span className={styles.scoreP0}>
-            {t("player0")}: {scores[0]}
+            {t("player0")}: {scores.player0}
           </span>
           <span className={styles.scoreP1}>
-            {t("player1")}: {scores[1]}
+            {t("player1")}: {scores.player1}
           </span>
         </div>
         <div className={styles.turn}>

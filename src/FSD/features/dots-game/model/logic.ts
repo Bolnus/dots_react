@@ -138,7 +138,7 @@ export function computeCapture(
   if (ring.length < 3) {
     return null;
   }
-  const opponent: PlayerId = capturer === 0 ? 1 : 0;
+  const opponent: PlayerId = capturer === "player0" ? "player1" : "player0";
   const scoredDots: GridPoint[] = [];
   const blockedCells: GridPoint[] = [];
 

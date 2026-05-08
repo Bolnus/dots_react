@@ -15,7 +15,7 @@ export function initialDotsGameState(): DotsGameState {
     config,
     cells: createEmptyGrid(config),
     dotsPlacedCount: 0,
-    scores: [0, 0],
+    scores: { player0: 0, player1: 0 },
     mode: "play",
     winner: null,
     surrenderedBy: null,
@@ -28,7 +28,7 @@ export function initialDotsGameState(): DotsGameState {
 
 /** Player to place the next dot: even count → player 0, odd → player 1. */
 function currentPlacingPlayer(dotsPlacedCount: number): PlayerId {
-  return dotsPlacedCount % 2 === 0 ? 0 : 1;
+  return dotsPlacedCount % 2 === 0 ? "player0" : "player1";
 }
 
 /** True when the intersection is empty and not blocked by a prior capture. */
@@ -87,9 +87,10 @@ function tryClosePolygon(state: DotsGameState): DotsGameState {
     return cancelPolygonDrawing(state);
   }
   const scored = capture.scoredDots.length;
-  const [s0, s1] = state.scores;
-  const scores: [number, number] = [s0, s1];
-  scores[capturer] += scored;
+  const scores: DotsGameState["scores"] = {
+    ...state.scores,
+    [capturer]: state.scores[capturer] + scored
+  };
   const newPolygon: FilledPolygon = { owner: capturer, ring: capture.ring };
   const cellsAfter = applyCapture(state.cells, capture);
   return {
@@ -117,7 +118,7 @@ function handleSurrender(state: DotsGameState): DotsGameState {
     return state;
   }
   const loser = surrenderLoser(state);
-  const winner: PlayerId = loser === 0 ? 1 : 0;
+  const winner: PlayerId = loser === "player0" ? "player1" : "player0";
   return {
     ...state,
     mode: "ended",

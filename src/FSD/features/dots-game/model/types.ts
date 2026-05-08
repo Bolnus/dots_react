@@ -1,4 +1,4 @@
-export type PlayerId = 0 | 1;
+export type PlayerId = "player0" | "player1";
 
 /** One intersection on the board (matches Qt grid dots). */
 export type GridPoint = Readonly<{
@@ -32,7 +32,7 @@ export type DotsGameState = Readonly<{
   cells: CellState[][];
   /** Number of successful dot placements (Qt `DotItem::dotsCounter`). */
   dotsPlacedCount: number;
-  scores: readonly [number, number];
+  scores: Readonly<Record<PlayerId, number>>;
   mode: DotsGameMode;
   winner: PlayerId | null;
   /** Winner by surrender (opponent gets the win). */

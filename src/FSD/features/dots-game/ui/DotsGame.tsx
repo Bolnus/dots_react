@@ -220,7 +220,7 @@ export function DotsGame(): ReactElement {
   const { cellSizePx, rows, cols } = config;
   const width = (cols - 1) * cellSizePx;
   const height = (rows - 1) * cellSizePx;
-  // console.log(JSON.stringify(cells, null, 2));
+  // console.log(JSON.stringify(cells.filter((row) => row.some((cell) => cell.owner !== null)), null, 2));
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -234,7 +234,7 @@ export function DotsGame(): ReactElement {
     };
   }, [undo]);
 
-  const currentPlayerName = currentPlayer === "player0" ? t("player0") : t("player1");
+  const currentPlayerName = t(currentPlayer);
   const turnLabel = formatTurnLabel(t, mode, currentPlayerName);
   const winnerText = formatWinnerText(t, winner, surrenderedBy);
 

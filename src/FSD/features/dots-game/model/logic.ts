@@ -78,38 +78,12 @@ function isRingVertex(p: GridPoint, ring: readonly GridPoint[]): boolean {
 }
 
 /**
- * True when `p` lies on the closed segment between `a` and `b` on the integer grid.
- * Edges can be orthogonal, diagonal, or longer collinear runs (because vertices may skip cells).
- */
-function gridPointOnClosedSegment(p: GridPoint, a: GridPoint, b: GridPoint): boolean {
-  const cross = (b.c - a.c) * (p.r - a.r) - (b.r - a.r) * (p.c - a.c);
-  if (cross !== 0) {
-    return false;
-  }
-  const minC = Math.min(a.c, b.c);
-  const maxC = Math.max(a.c, b.c);
-  const minR = Math.min(a.r, b.r);
-  const maxR = Math.max(a.r, b.r);
-  return p.c >= minC && p.c <= maxC && p.r >= minR && p.r <= maxR;
-}
-
-/** True when `p` lies on any edge of the polygon ring. */
-function gridPointOnPolygonBoundary(p: GridPoint, ring: readonly GridPoint[]): boolean {
-  const n = ring.length;
-  for (let i = 0; i < n; i++) {
-    const a = ring[i];
-    const b = ring[(i + 1) % n];
-    if (gridPointOnClosedSegment(p, a, b)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * Captured/painted point definition (Qt-like):
- * - any point strictly inside OR lying on the boundary is non-interactable,
+ * - any point strictly inside the polygon is non-interactable,
  * - except the ring vertices themselves (player’s dots forming the outline).
+ *
+ * Since we only allow polygon edges between neighbouring dots (8-connected),
+ * a boundary grid point is always a vertex, so explicit boundary checks are unnecessary.
  */
 export function isCapturedByPolygon(p: GridPoint, ring: readonly GridPoint[]): boolean {
   if (ring.length < 3) {
@@ -118,7 +92,7 @@ export function isCapturedByPolygon(p: GridPoint, ring: readonly GridPoint[]): b
   if (isRingVertex(p, ring)) {
     return false;
   }
-  return pointInPolygon(p, ring) || gridPointOnPolygonBoundary(p, ring);
+  return pointInPolygon(p, ring);
 }
 
 export type CaptureResult = Readonly<{

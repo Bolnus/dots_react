@@ -45,3 +45,12 @@ export type DotsGameState = Readonly<{
   /** Stack of placed dot positions for undo (LMB / RMB starter). */
   placementStack: GridPoint[];
 }>;
+
+/** Discriminated union dispatched by `useDotsGame` into `reduceDotsGame`. */
+export type DotsGameAction =
+  | { type: "CLEAR" }
+  | { type: "UNDO" }
+  | { type: "SURRENDER" }
+  | { type: "PLACE_LMB"; point: GridPoint }
+  | { type: "PLACE_RMB"; point: GridPoint }
+  | { type: "POLYGON_CLICK"; point: GridPoint };

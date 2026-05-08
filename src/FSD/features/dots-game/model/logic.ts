@@ -113,14 +113,11 @@ function gridPointOnPolygonBoundary(p: GridPoint, ring: readonly GridPoint[]): b
  */
 export function isCapturedByPolygon(p: GridPoint, ring: readonly GridPoint[]): boolean {
   if (ring.length < 3) {
-    console.log('ring.length', ring.length)
     return false;
   }
   if (isRingVertex(p, ring)) {
-    console.log('isRingVertex')
     return false;
   }
-  console.log('pointInPolygon(p, ring)=', pointInPolygon(p, ring), 'gridPointOnPolygonBoundary(p, ring)=', gridPointOnPolygonBoundary(p, ring))
   return pointInPolygon(p, ring) || gridPointOnPolygonBoundary(p, ring);
 }
 

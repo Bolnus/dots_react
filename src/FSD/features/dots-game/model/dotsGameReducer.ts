@@ -6,7 +6,7 @@ import {
   defaultDotsConfig,
   ringFromChainPath
 } from "./logic";
-import type { DotsGameState, FilledPolygon, GridPoint, PlayerId } from "./types";
+import type { DotsGameAction, DotsGameState, FilledPolygon, GridPoint, PlayerId } from "./types";
 
 /** Initial board, scores, and empty polygon state for a new session. */
 export function initialDotsGameState(): DotsGameState {
@@ -25,14 +25,6 @@ export function initialDotsGameState(): DotsGameState {
     placementStack: []
   };
 }
-
-export type DotsGameAction =
-  | { type: "CLEAR" }
-  | { type: "UNDO" }
-  | { type: "SURRENDER" }
-  | { type: "PLACE_LMB"; point: GridPoint }
-  | { type: "PLACE_RMB"; point: GridPoint }
-  | { type: "POLYGON_CLICK"; point: GridPoint };
 
 /** Player to place the next dot: even count → player 0, odd → player 1. */
 function currentPlacingPlayer(dotsPlacedCount: number): PlayerId {

@@ -93,13 +93,11 @@ function isGridPointOnClosedSegment(p: GridPoint, a: GridPoint, b: GridPoint): b
     return false;
   }
   return (
-    p.r >= Math.min(a.r, b.r) &&
-    p.r <= Math.max(a.r, b.r) &&
-    p.c >= Math.min(a.c, b.c) &&
-    p.c <= Math.max(a.c, b.c)
+    p.r >= Math.min(a.r, b.r) && p.r <= Math.max(a.r, b.r) && p.c >= Math.min(a.c, b.c) && p.c <= Math.max(a.c, b.c)
   );
 }
 
+/** */
 function isOnPolygonBoundary(p: GridPoint, ring: readonly GridPoint[]): boolean {
   const n = ring.length;
   for (let i = 0; i < n; i++) {
@@ -145,9 +143,7 @@ function computeInteriorDotKeys(ring: readonly GridPoint[], dotRows: number, dot
   return interior;
 }
 
-/**
- * True when the dot lies in the strictly interior region of the ring (not on an edge or vertex).
- */
+/** True when the dot lies in the strictly interior region of the ring (not on an edge or vertex). */
 export function isCapturedByPolygon(
   p: GridPoint,
   ring: readonly GridPoint[],
@@ -183,7 +179,6 @@ export function computeCapture(
   const dotRows = cells.length;
   const dotCols = cells[0]?.length ?? 0;
   const interiorKeys = computeInteriorDotKeys(ring, dotRows, dotCols);
-  console.log(interiorKeys)
 
   const opponent: PlayerId = capturer === "player0" ? "player1" : "player0";
   const scoredDots: GridPoint[] = [];

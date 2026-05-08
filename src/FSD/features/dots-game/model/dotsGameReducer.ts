@@ -6,7 +6,7 @@ import {
   defaultDotsConfig,
   ringFromChainPath
 } from "./logic";
-import type { DotsGameAction, DotsGameState, FilledPolygon, GridPoint, PlayerId } from "./types";
+import type { DotsGameAction, DotsGameState, FilledPolygon, GridPoint, PlayerId, UndoEntry } from "./types";
 
 /** Initial board, scores, and empty polygon state for a new session. */
 export function initialDotsGameState(): DotsGameState {
@@ -22,7 +22,7 @@ export function initialDotsGameState(): DotsGameState {
     chainStart: null,
     chainPath: [],
     polygons: [],
-    placementStack: []
+    undoStack: []
   };
 }
 
@@ -39,25 +39,54 @@ function canPlaceAt(cells: DotsGameState["cells"], p: GridPoint): boolean {
 
 /** Records a placed dot so Undo can pop it in order. */
 function pushPlacement(state: DotsGameState, point: GridPoint): DotsGameState {
+  const entry: UndoEntry = { type: "placement", point };
   return {
     ...state,
-    placementStack: [...state.placementStack, point]
+    undoStack: [...state.undoStack, entry]
   };
 }
 
-/** Removes the last placed dot from the grid and stack (one turn rewind). */
-function popLastPlacement(state: DotsGameState): DotsGameState {
-  const stack = [...state.placementStack];
+/** Pops the last undo step (placement or capture). */
+function popUndoEntry(state: DotsGameState): DotsGameState {
+  const stack = [...state.undoStack];
   const last = stack.pop();
   if (!last) {
     return state;
   }
+  if (last.type === "placement") {
+    const cells = state.cells.map((row) => row.map((c) => ({ ...c })));
+    cells[last.point.r][last.point.c] = { owner: null, blocked: false };
+    return {
+      ...state,
+      cells,
+      undoStack: stack,
+      dotsPlacedCount: Math.max(0, state.dotsPlacedCount - 1)
+    };
+  }
   const cells = state.cells.map((row) => row.map((c) => ({ ...c })));
-  cells[last.r][last.c] = { owner: null, blocked: false };
+  for (const p of last.blockedCells) {
+    const cell = cells[p.r][p.c];
+    cells[p.r][p.c] = { owner: cell.owner, blocked: false };
+  }
+  const { capturer, scoredCount, enclosureStarter } = last;
+  cells[enclosureStarter.r][enclosureStarter.c] = { owner: null, blocked: false };
+
+  let undoStack = stack;
+  const prev = undoStack[undoStack.length - 1];
+  if (prev?.type === "placement" && prev.point.r === enclosureStarter.r && prev.point.c === enclosureStarter.c) {
+    undoStack = undoStack.slice(0, -1);
+  }
+
+  const polygons = state.polygons.slice(0, -1);
   return {
     ...state,
     cells,
-    placementStack: stack,
+    undoStack,
+    polygons,
+    scores: {
+      ...state.scores,
+      [capturer]: state.scores[capturer] - scoredCount
+    },
     dotsPlacedCount: Math.max(0, state.dotsPlacedCount - 1)
   };
 }
@@ -66,7 +95,7 @@ function popLastPlacement(state: DotsGameState): DotsGameState {
 function cancelPolygonDrawing(state: DotsGameState): DotsGameState {
   let next: DotsGameState = { ...state, mode: "play", chainStart: null, chainPath: [] };
   if (state.chainStart) {
-    next = popLastPlacement(next);
+    next = popUndoEntry(next);
   }
   return next;
 }
@@ -93,6 +122,14 @@ function tryClosePolygon(state: DotsGameState): DotsGameState {
   };
   const newPolygon: FilledPolygon = { owner: capturer, ring: capture.ring };
   const cellsAfter = applyCapture(state.cells, capture);
+  const starter = state.chainStart;
+  const captureUndo: UndoEntry = {
+    type: "capture",
+    capturer,
+    scoredCount: scored,
+    blockedCells: capture.blockedCells.map((p) => ({ r: p.r, c: p.c })),
+    enclosureStarter: { r: starter.r, c: starter.c }
+  };
   return {
     ...state,
     cells: cellsAfter,
@@ -100,7 +137,8 @@ function tryClosePolygon(state: DotsGameState): DotsGameState {
     mode: "play",
     chainStart: null,
     chainPath: [],
-    polygons: [...state.polygons, newPolygon]
+    polygons: [...state.polygons, newPolygon],
+    undoStack: [...state.undoStack, captureUndo]
   };
 }
 
@@ -134,10 +172,10 @@ function handleUndo(state: DotsGameState): DotsGameState {
   if (state.mode === "drawPolygon") {
     return cancelPolygonDrawing(state);
   }
-  if (state.placementStack.length === 0) {
+  if (state.undoStack.length === 0) {
     return state;
   }
-  return popLastPlacement(state);
+  return popUndoEntry(state);
 }
 
 /** Normal move: place current player’s dot on a free intersection. */
@@ -202,6 +240,16 @@ function handlePolygonClick(state: DotsGameState, point: GridPoint): DotsGameSta
   const capturer = capturerCell.owner;
 
   const closingStart = point.r === start.r && point.c === start.c && state.chainPath.length >= 3;
+  if (closingStart && state.chainPath.length < 4) {
+    return cancelPolygonDrawing(state);
+  }
+
+  const revisitsNonStartVertex =
+    state.chainPath.some((p) => p.r === point.r && p.c === point.c) && (point.r !== start.r || point.c !== start.c);
+  if (revisitsNonStartVertex) {
+    return cancelPolygonDrawing(state);
+  }
+
   if (closingStart) {
     if (!areNeighbourCells(last, start)) {
       return state;

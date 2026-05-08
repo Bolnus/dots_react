@@ -220,6 +220,7 @@ export function DotsGame(): ReactElement {
   const { cellSizePx, rows, cols } = config;
   const width = (cols - 1) * cellSizePx;
   const height = (rows - 1) * cellSizePx;
+  // console.log(JSON.stringify(cells, null, 2));
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {

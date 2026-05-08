@@ -16,7 +16,7 @@ export function createEmptyGrid(config: DotsGameConfig): CellState[][] {
 
 /** Default board dimensions, aligned with the Qt grid spacing concept. */
 export function defaultDotsConfig(): DotsGameConfig {
-  return { rows: 23, cols: 31, cellSizePx: 20 };
+  return { rows: 8, cols: 8, cellSizePx: 20 };
 }
 
 /** Copies the 2D grid so reducer updates remain immutable. */

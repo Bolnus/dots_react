@@ -62,9 +62,6 @@ export function handleBoardMouseDown(
   }
   if (e.button === 2) {
     e.preventDefault();
-    if (handlers.mode === "play") {
-      handlers.placeRmb(p);
-    }
     return;
   }
   if (e.button !== 0) {

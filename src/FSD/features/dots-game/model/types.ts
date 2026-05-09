@@ -44,6 +44,11 @@ export type DotsGameState = Readonly<{
   cells: CellState[][];
   /** Number of successful dot placements (Qt `DotItem::dotsCounter`). */
   dotsPlacedCount: number;
+  /**
+   * Dot placed during the current turn but not committed yet.
+   * The turn is only finalized when the player presses Accept or completes a polygon.
+   */
+  pendingDot: GridPoint | null;
   scores: Readonly<Record<PlayerId, number>>;
   mode: DotsGameMode;
   winner: PlayerId | null;
@@ -63,6 +68,7 @@ export type DotsGameAction =
   | { type: "CLEAR" }
   | { type: "UNDO" }
   | { type: "SURRENDER" }
+  | { type: "ACCEPT" }
   | { type: "PLACE_LMB"; point: GridPoint }
   | { type: "PLACE_RMB"; point: GridPoint }
   | { type: "POLYGON_CLICK"; point: GridPoint };

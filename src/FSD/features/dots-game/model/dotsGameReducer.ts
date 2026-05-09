@@ -15,6 +15,7 @@ export function initialDotsGameState(): DotsGameState {
     config,
     cells: createEmptyGrid(config),
     dotsPlacedCount: 0,
+    pendingDot: null,
     scores: { player0: 0, player1: 0 },
     mode: "play",
     winner: null,
@@ -35,6 +36,42 @@ function currentPlacingPlayer(dotsPlacedCount: number): PlayerId {
 function canPlaceAt(cells: DotsGameState["cells"], p: GridPoint): boolean {
   const cell = cells[p.r][p.c];
   return !cell.blocked && cell.owner === null;
+}
+
+/** True when points have identical grid coordinates. */
+function isSamePoint(a: GridPoint, b: GridPoint): boolean {
+  return a.r === b.r && a.c === b.c;
+}
+
+/** Clears a dot on the grid (owner=null, blocked=false). */
+function clearDotAt(state: DotsGameState, point: GridPoint): DotsGameState {
+  const cells = state.cells.map((row) => row.map((c) => ({ ...c })));
+  cells[point.r][point.c] = { owner: null, blocked: false };
+  return { ...state, cells };
+}
+
+/** Places a not-yet-accepted dot for the current turn. */
+function placePendingDot(state: DotsGameState, point: GridPoint, player: PlayerId): DotsGameState {
+  const cells = state.cells.map((row) => row.map((c) => ({ ...c })));
+  cells[point.r][point.c] = { owner: player, blocked: false };
+  return { ...state, cells, pendingDot: point };
+}
+
+/** Commits the pending dot: advances turn and enables undo. */
+function commitPendingDot(state: DotsGameState): DotsGameState {
+  if (!state.pendingDot) {
+    return state;
+  }
+  const point = state.pendingDot;
+  const next = pushPlacement(
+    {
+      ...state,
+      pendingDot: null,
+      dotsPlacedCount: state.dotsPlacedCount + 1
+    },
+    point
+  );
+  return next;
 }
 
 /** Records a placed dot so Undo can pop it in order. */
@@ -94,8 +131,9 @@ function popUndoEntry(state: DotsGameState): DotsGameState {
 /** Aborts enclosure mode and removes the RMB starter dot if one was placed. */
 function cancelPolygonDrawing(state: DotsGameState): DotsGameState {
   let next: DotsGameState = { ...state, mode: "play", chainStart: null, chainPath: [] };
-  if (state.chainStart) {
-    next = popUndoEntry(next);
+  if (state.pendingDot) {
+    next = clearDotAt(next, state.pendingDot);
+    next = { ...next, pendingDot: null };
   }
   return next;
 }
@@ -104,6 +142,9 @@ function cancelPolygonDrawing(state: DotsGameState): DotsGameState {
 function tryClosePolygon(state: DotsGameState): DotsGameState {
   const ring = ringFromChainPath(state.chainPath);
   if (!state.chainStart || ring.length < 3) {
+    return cancelPolygonDrawing(state);
+  }
+  if (!state.pendingDot || !isSamePoint(state.pendingDot, state.chainStart)) {
     return cancelPolygonDrawing(state);
   }
   const capturerCell = state.cells[state.chainStart.r][state.chainStart.c];
@@ -121,8 +162,9 @@ function tryClosePolygon(state: DotsGameState): DotsGameState {
     [capturer]: state.scores[capturer] + scored
   };
   const newPolygon: FilledPolygon = { owner: capturer, ring: capture.ring };
-  const cellsAfter = applyCapture(state.cells, capture);
-  const starter = state.chainStart;
+  const committed = commitPendingDot(state);
+  const cellsAfter = applyCapture(committed.cells, capture);
+  const starter = committed.chainStart!;
   const captureUndo: UndoEntry = {
     type: "capture",
     capturer,
@@ -131,14 +173,14 @@ function tryClosePolygon(state: DotsGameState): DotsGameState {
     enclosureStarter: { r: starter.r, c: starter.c }
   };
   return {
-    ...state,
+    ...committed,
     cells: cellsAfter,
     scores,
     mode: "play",
     chainStart: null,
     chainPath: [],
     polygons: [...state.polygons, newPolygon],
-    undoStack: [...state.undoStack, captureUndo]
+    undoStack: [...committed.undoStack, captureUndo]
   };
 }
 
@@ -172,10 +214,25 @@ function handleUndo(state: DotsGameState): DotsGameState {
   if (state.mode === "drawPolygon") {
     return cancelPolygonDrawing(state);
   }
+  if (state.pendingDot) {
+    const next = clearDotAt(state, state.pendingDot);
+    return { ...next, pendingDot: null };
+  }
   if (state.undoStack.length === 0) {
     return state;
   }
   return popUndoEntry(state);
+}
+
+/** */
+function handleAccept(state: DotsGameState): DotsGameState {
+  if (state.mode !== "play") {
+    return state;
+  }
+  if (!state.pendingDot) {
+    return state;
+  }
+  return commitPendingDot(state);
 }
 
 /** Normal move: place current player’s dot on a free intersection. */
@@ -183,47 +240,42 @@ function handlePlaceLmb(state: DotsGameState, point: GridPoint): DotsGameState {
   if (state.mode !== "play") {
     return state;
   }
+  const player = currentPlacingPlayer(state.dotsPlacedCount);
+
+  if (state.pendingDot) {
+    // Move pending placement to another empty point (same turn).
+    if (canPlaceAt(state.cells, point)) {
+      const cleared = clearDotAt(state, state.pendingDot);
+      return placePendingDot({ ...cleared }, point, player);
+    }
+    // Start polygon drawing by tapping a neighbouring own dot.
+    const target = state.cells[point.r][point.c];
+    if (
+      target.owner === player &&
+      !target.blocked &&
+      areNeighbourCells(state.pendingDot, point) &&
+      !isSamePoint(state.pendingDot, point)
+    ) {
+      return {
+        ...state,
+        mode: "drawPolygon",
+        chainStart: state.pendingDot,
+        chainPath: [state.pendingDot, point]
+      };
+    }
+    return state;
+  }
+
   if (!canPlaceAt(state.cells, point)) {
     return state;
   }
-  const player = currentPlacingPlayer(state.dotsPlacedCount);
-  const cells = state.cells.map((row) => row.map((c) => ({ ...c })));
-  cells[point.r][point.c] = { owner: player, blocked: false };
-  return pushPlacement(
-    {
-      ...state,
-      cells,
-      dotsPlacedCount: state.dotsPlacedCount + 1
-    },
-    point
-  );
+  return placePendingDot(state, point, player);
 }
 
 /** Places a dot and enters enclosure mode from that intersection (Qt RMB). */
-function handlePlaceRmb(state: DotsGameState, point: GridPoint): DotsGameState {
-  if (state.mode !== "play") {
-    return state;
-  }
-  if (!canPlaceAt(state.cells, point)) {
-    return state;
-  }
-  const player = currentPlacingPlayer(state.dotsPlacedCount);
-  const cells = state.cells.map((row) => row.map((c) => ({ ...c })));
-  cells[point.r][point.c] = { owner: player, blocked: false };
-  const placed = pushPlacement(
-    {
-      ...state,
-      cells,
-      dotsPlacedCount: state.dotsPlacedCount + 1
-    },
-    point
-  );
-  return {
-    ...placed,
-    mode: "drawPolygon",
-    chainStart: point,
-    chainPath: [point]
-  };
+function handlePlaceRmb(state: DotsGameState): DotsGameState {
+  // RMB is intentionally ignored to keep input platform-agnostic.
+  return state;
 }
 
 /** Extends the chain or closes back on the start when neighbours and capture rules allow. */
@@ -288,12 +340,14 @@ export function reduceDotsGame(state: DotsGameState, action: DotsGameAction): Do
       return initialDotsGameState();
     case "SURRENDER":
       return handleSurrender(state);
+    case "ACCEPT":
+      return handleAccept(state);
     case "UNDO":
       return handleUndo(state);
     case "PLACE_LMB":
       return handlePlaceLmb(state, action.point);
     case "PLACE_RMB":
-      return handlePlaceRmb(state, action.point);
+      return handlePlaceRmb(state);
     case "POLYGON_CLICK":
       return handlePolygonClick(state, action.point);
     default:

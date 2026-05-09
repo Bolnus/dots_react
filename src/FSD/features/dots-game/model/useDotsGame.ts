@@ -10,6 +10,7 @@ export type UseDotsGameResult = Readonly<{
   placeLmb: (point: GridPoint) => void;
   placeRmb: (point: GridPoint) => void;
   polygonClick: (point: GridPoint) => void;
+  accept: () => void;
   undo: () => void;
   clear: () => void;
   surrender: () => void;
@@ -32,6 +33,10 @@ export function useDotsGame(): UseDotsGameResult {
     dispatch({ type: "POLYGON_CLICK", point });
   }, []);
 
+  const accept = useCallback(() => {
+    dispatch({ type: "ACCEPT" });
+  }, []);
+
   const undo = useCallback(() => {
     dispatch({ type: "UNDO" });
   }, []);
@@ -49,6 +54,7 @@ export function useDotsGame(): UseDotsGameResult {
     placeLmb,
     placeRmb,
     polygonClick,
+    accept,
     undo,
     clear,
     surrender,

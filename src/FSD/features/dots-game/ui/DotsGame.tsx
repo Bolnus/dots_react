@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useDotsGame } from "../model/useDotsGame";
 
 import styles from "./DotsGame.module.css";
+import { ToolbarButton } from "@/FSD/shared/ui/toolbar-button/ToolbarButton";
 import {
   buildDotData,
   buildGridLinesData,
@@ -28,8 +29,8 @@ export function DotsGame(): ReactElement {
   const t = useTranslations("DotsGame");
   const boardRef = useRef<HTMLDivElement | null>(null);
   const boardWrapRef = useRef<HTMLDivElement | null>(null);
-  const { state, placeLmb, placeRmb, polygonClick, undo, clear, surrender, currentPlayer } = useDotsGame();
-  const { config, cells, scores, mode, chainPath, polygons, winner, surrenderedBy } = state;
+  const { state, placeLmb, placeRmb, polygonClick, accept, undo, clear, surrender, currentPlayer } = useDotsGame();
+  const { config, cells, scores, mode, chainPath, polygons, winner, surrenderedBy, pendingDot } = state;
   const { cellSizePx, rows, cols } = config;
   const width = (cols - 1) * cellSizePx;
   const height = (rows - 1) * cellSizePx;
@@ -120,15 +121,14 @@ export function DotsGame(): ReactElement {
       </div>
       <p className={styles.hint}>{t("rulesShort")}</p>
       <div className={styles.actions}>
-        <button type="button" className={styles.btn} onClick={undo}>
-          {t("undo")}
-        </button>
-        <button type="button" className={styles.btn} onClick={clear}>
-          {t("clear")}
-        </button>
-        <button type="button" className={styles.btn} onClick={surrender} disabled={state.mode === "ended"}>
+        <ToolbarButton onClick={accept} disabled={state.mode !== "play" || pendingDot === null}>
+          {t("accept")}
+        </ToolbarButton>
+        <ToolbarButton onClick={undo}>{t("undo")}</ToolbarButton>
+        <ToolbarButton onClick={clear}>{t("clear")}</ToolbarButton>
+        <ToolbarButton onClick={surrender} disabled={state.mode === "ended"}>
           {t("surrender")}
-        </button>
+        </ToolbarButton>
       </div>
       <div ref={boardWrapRef} className={styles.boardWrap}>
         <div

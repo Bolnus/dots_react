@@ -36,7 +36,13 @@
     "surrender": "Surrender",
     "boardAria": "Dots game grid",
     "resultSurrender": "{winner} wins (opponent surrendered).",
-    "resultWin": "{winner} wins."
+    "resultWin": "{winner} wins.",
+    "rowsLabel": "Rows",
+    "colsLabel": "Columns",
+    "playerName0": "Player 1 name",
+    "playerName1": "Player 2 name",
+    "startGame": "Start game",
+    "invalidGridSize": "Enter whole numbers between {min} and {max} for rows and columns."
   },
   "games": {
     "dots": {

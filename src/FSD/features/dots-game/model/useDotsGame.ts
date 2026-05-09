@@ -2,8 +2,8 @@
 
 import { useCallback, useReducer } from "react";
 
-import { currentPlacingPlayer, initialDotsGameState, reduceDotsGame } from "./dotsGameReducer";
-import type { DotsGameState, GridPoint, PlayerId } from "./types";
+import { currentPlacingPlayer, initialDotsGameStateFromConfig, reduceDotsGame } from "./dotsGameReducer";
+import type { DotsGameConfig, DotsGameState, GridPoint, PlayerId } from "./types";
 
 export type UseDotsGameResult = Readonly<{
   state: DotsGameState;
@@ -18,8 +18,8 @@ export type UseDotsGameResult = Readonly<{
 }>;
 
 /** Client hook: exposes dots-game state and UI actions. */
-export function useDotsGame(): UseDotsGameResult {
-  const [state, dispatch] = useReducer(reduceDotsGame, undefined, initialDotsGameState);
+export function useDotsGame(initialConfig: DotsGameConfig): UseDotsGameResult {
+  const [state, dispatch] = useReducer(reduceDotsGame, initialConfig, initialDotsGameStateFromConfig);
 
   const placeLmb = useCallback((point: GridPoint) => {
     dispatch({ type: "PLACE_LMB", point });

@@ -36,7 +36,13 @@
     "surrender": "Сдаться",
     "boardAria": "Поле игры «Точки»",
     "resultSurrender": "Победа: {winner} (соперник сдался).",
-    "resultWin": "Победа: {winner}."
+    "resultWin": "Победа: {winner}.",
+    "rowsLabel": "Строки",
+    "colsLabel": "Столбцы",
+    "playerName0": "Имя игрока 1",
+    "playerName1": "Имя игрока 2",
+    "startGame": "Начать игру",
+    "invalidGridSize": "Укажите целые числа от {min} до {max} для строк и столбцов."
   },
   "games": {
     "dots": {

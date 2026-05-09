@@ -182,6 +182,7 @@ export default defineConfig([
           allowMultipleTags: false
         }
       ],
+      "jsdoc/no-blank-blocks": "warn",
 
       // Import:
       // "import/order": [

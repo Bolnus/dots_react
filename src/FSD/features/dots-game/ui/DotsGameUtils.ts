@@ -368,12 +368,13 @@ export function formatTurnLabel(
 export function formatWinnerText(
   t: ReturnType<typeof useTranslations>,
   winner: PlayerId | null,
-  surrenderedBy: PlayerId | null
+  surrenderedBy: PlayerId | null,
+  playerLabels: Readonly<Record<PlayerId, string>>
 ): string | null {
   if (winner === null) {
     return null;
   }
-  const winnerName = winner === "player0" ? t("player0") : t("player1");
+  const winnerName = playerLabels[winner];
   if (surrenderedBy !== null) {
     return t("resultSurrender", { winner: winnerName });
   }

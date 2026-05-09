@@ -1,198 +1,151 @@
 "use client";
 
-import type { ReactElement } from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useState, type Dispatch, type ReactElement, type SetStateAction } from "react";
 import { useTranslations } from "next-intl";
 
-import { useDotsGame } from "../model/useDotsGame";
+import { defaultDotsConfig } from "../model/logic";
+import type { DotsGameConfig, PlayerId } from "../model/types";
 
 import styles from "./DotsGame.module.css";
+import { DotsGameBackLink } from "./DotsGameBackLink";
+import { DotsGamePlay } from "./DotsGamePlay";
 import { ToolbarButton } from "@/FSD/shared/ui/toolbar-button/ToolbarButton";
-import {
-  buildDotData,
-  buildGridLinesData,
-  buildPolygonData,
-  buildPreviewPoints,
-  dotClassFor,
-  formatTurnLabel,
-  formatWinnerText,
-  handleBoardMouseDown,
-  handleEscapeKey,
-  onBoardTouchEndPreventDefault,
-  onBoardTouchMove,
-  onBoardTouchStartPreventDefault,
-  previewStrokeForChain
-} from "./DotsGameUtils";
-import type { DotClassMap, MutablePoint } from "./DotsGameTypes";
 
-/** Dots (polygon capture) board: LMB place, RMB start enclosure, trace cycle, Esc/Undo. */
+const GRID_MIN = 3;
+const GRID_MAX = 60;
+
+type Session = Readonly<{
+  key: number;
+  config: DotsGameConfig;
+  labels: Readonly<Record<PlayerId, string>>;
+}>;
+
+type StartDotsGameSessionArgs = Readonly<{
+  rowsStr: string;
+  colsStr: string;
+  name0: string;
+  name1: string;
+  cellSizePx: number;
+  t: (key: string, values?: Record<string, number>) => string;
+  setSetupError: Dispatch<SetStateAction<string | null>>;
+  setSession: Dispatch<SetStateAction<Session | null>>;
+}>;
+
+/** */
+function startDotsGameSession(args: StartDotsGameSessionArgs): void {
+  const { rowsStr, colsStr, name0, name1, cellSizePx, t, setSetupError, setSession } = args;
+  const rows = Number.parseInt(rowsStr, 10);
+  const cols = Number.parseInt(colsStr, 10);
+  if (
+    !Number.isFinite(rows) ||
+    !Number.isFinite(cols) ||
+    !Number.isInteger(rows) ||
+    !Number.isInteger(cols) ||
+    rows < GRID_MIN ||
+    rows > GRID_MAX ||
+    cols < GRID_MIN ||
+    cols > GRID_MAX
+  ) {
+    setSetupError(t("invalidGridSize", { min: GRID_MIN, max: GRID_MAX }));
+    return;
+  }
+  setSetupError(null);
+  const config: DotsGameConfig = { rows, cols, cellSizePx };
+  const labels: Record<PlayerId, string> = {
+    player0: name0.trim() || t("player0"),
+    player1: name1.trim() || t("player1")
+  };
+  setSession({ key: Date.now(), config, labels });
+}
+
+/** Dots (polygon capture): setup (stage 1) then board (stage 2). */
 export function DotsGame(): ReactElement {
   const t = useTranslations("DotsGame");
-  const boardRef = useRef<HTMLDivElement | null>(null);
-  const boardWrapRef = useRef<HTMLDivElement | null>(null);
-  const { state, placeLmb, placeRmb, polygonClick, accept, undo, clear, surrender, currentPlayer } = useDotsGame();
-  const { config, cells, scores, mode, chainPath, polygons, winner, surrenderedBy, pendingDot } = state;
-  const { cellSizePx, rows, cols } = config;
-  const width = (cols - 1) * cellSizePx;
-  const height = (rows - 1) * cellSizePx;
-  // console.log(JSON.stringify(cells.filter((row) => row.some((cell) => cell.owner !== null)), null, 2));
+  const defaults = useMemo(() => defaultDotsConfig(), []);
+  const [rowsStr, setRowsStr] = useState(String(defaults.rows));
+  const [colsStr, setColsStr] = useState(String(defaults.cols));
+  const [name0, setName0] = useState("");
+  const [name1, setName1] = useState("");
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => handleEscapeKey(e, undo);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [undo]);
-
-  useEffect(() => {
-    const boardEl = boardRef.current;
-    const wrapEl = boardWrapRef.current;
-    if (!boardEl || !wrapEl) {
-      return undefined;
-    }
-
-    const tapStart: MutablePoint = { x: null, y: null };
-    const lastMid: MutablePoint = { x: null, y: null };
-    const didTwoFingerScroll = { value: false };
-
-    const getBoardDownArgs = (clientX: number, clientY: number) => ({
-      clientX,
-      clientY,
-      boardEl,
-      mode: state.mode,
-      cellSizePx,
-      rows,
-      cols,
-      isRmb: false,
-      placeLmb,
-      placeRmb,
-      polygonClick
-    });
-
-    const onTouchStart = (e: TouchEvent): void =>
-      onBoardTouchStartPreventDefault({ tapStart, lastMid, didTwoFingerScroll }, e);
-    const onTouchMove = (e: TouchEvent): void => onBoardTouchMove({ wrapEl, tapStart, lastMid, didTwoFingerScroll }, e);
-    const onTouchEnd = (e: TouchEvent): void =>
-      onBoardTouchEndPreventDefault({ tapStart, lastMid, didTwoFingerScroll, getBoardDownArgs }, e);
-
-    boardEl.addEventListener("touchstart", onTouchStart, { passive: false });
-    boardEl.addEventListener("touchmove", onTouchMove, { passive: false });
-    boardEl.addEventListener("touchend", onTouchEnd, { passive: false });
-    boardEl.addEventListener("touchcancel", onTouchEnd, { passive: false });
-
-    return () => {
-      boardEl.removeEventListener("touchstart", onTouchStart);
-      boardEl.removeEventListener("touchmove", onTouchMove);
-      boardEl.removeEventListener("touchend", onTouchEnd);
-      boardEl.removeEventListener("touchcancel", onTouchEnd);
-    };
-  }, [cellSizePx, cols, placeLmb, placeRmb, polygonClick, rows, state.mode]);
-
-  const currentPlayerName = t(currentPlayer);
-  const turnLabel = formatTurnLabel(t, mode, currentPlayerName);
-  const winnerText = formatWinnerText(t, winner, surrenderedBy);
-
-  const gridLinesData = useMemo(
-    () => buildGridLinesData({ rows, cols, cellSizePx, width, height }),
-    [rows, cols, cellSizePx, width, height]
-  );
-
-  const polygonData = useMemo(() => buildPolygonData(polygons, cellSizePx), [polygons, cellSizePx]);
-
-  const previewPoints = useMemo(() => buildPreviewPoints(mode, chainPath, cellSizePx), [mode, chainPath, cellSizePx]);
-
-  const dotData = useMemo(() => buildDotData(cells, cellSizePx), [cells, cellSizePx]);
-
-  const dotClassMap: DotClassMap = { p0: styles.dotP0, p1: styles.dotP1, blockedEmpty: styles.dotBlockedEmpty };
-  const pendingDotKey = pendingDot ? `d-${pendingDot.r}-${pendingDot.c}` : null;
-  const previewStroke = previewStrokeForChain(mode, state.chainStart, state.cells);
+  if (session) {
+    return <DotsGamePlay key={session.key} config={session.config} playerLabels={session.labels} />;
+  }
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.toolbar}>
-        <div className={styles.scores}>
-          <span className={styles.scoreP0}>
-            {t("player0")}: {scores.player0}
-          </span>
-          <span className={styles.scoreP1}>
-            {t("player1")}: {scores.player1}
-          </span>
-        </div>
-        <div className={styles.turn}>
-          <span className={styles.turnStrong}>{t("statusLabel")}</span> {turnLabel}
-        </div>
+    <div className={styles.setup}>
+      <div className={styles.setupBack}>
+        <DotsGameBackLink />
       </div>
       <p className={styles.hint}>{t("rulesShort")}</p>
-      <div className={styles.actions}>
-        <ToolbarButton onClick={accept} disabled={state.mode !== "play" || pendingDot === null}>
-          {t("accept")}
-        </ToolbarButton>
-        <ToolbarButton onClick={undo}>{t("undo")}</ToolbarButton>
-        <ToolbarButton onClick={clear}>{t("clear")}</ToolbarButton>
-        <ToolbarButton onClick={surrender} disabled={state.mode === "ended"}>
-          {t("surrender")}
-        </ToolbarButton>
+      <div className={styles.setupFields}>
+        <label className={styles.setupLabel}>
+          <span>{t("rowsLabel")}</span>
+          <input
+            className={styles.setupInput}
+            type="number"
+            inputMode="numeric"
+            min={GRID_MIN}
+            max={GRID_MAX}
+            value={rowsStr}
+            onChange={(e) => setRowsStr(e.target.value)}
+          />
+        </label>
+        <label className={styles.setupLabel}>
+          <span>{t("colsLabel")}</span>
+          <input
+            className={styles.setupInput}
+            type="number"
+            inputMode="numeric"
+            min={GRID_MIN}
+            max={GRID_MAX}
+            value={colsStr}
+            onChange={(e) => setColsStr(e.target.value)}
+          />
+        </label>
+        <label className={styles.setupLabel}>
+          <span>{t("playerName0")}</span>
+          <input
+            className={styles.setupInput}
+            type="text"
+            autoComplete="off"
+            value={name0}
+            onChange={(e) => setName0(e.target.value)}
+            placeholder={t("player0")}
+          />
+        </label>
+        <label className={styles.setupLabel}>
+          <span>{t("playerName1")}</span>
+          <input
+            className={styles.setupInput}
+            type="text"
+            autoComplete="off"
+            value={name1}
+            onChange={(e) => setName1(e.target.value)}
+            placeholder={t("player1")}
+          />
+        </label>
       </div>
-      <div ref={boardWrapRef} className={styles.boardWrap}>
-        <div
-          ref={boardRef}
-          className={styles.board}
-          style={{ width, height }}
-          onMouseDown={(e) =>
-            handleBoardMouseDown(e, boardRef, {
-              mode: state.mode,
-              cellSizePx,
-              rows,
-              cols,
-              placeLmb,
-              placeRmb,
-              polygonClick
+      {setupError ? <p className={styles.setupError}>{setupError}</p> : null}
+      <div className={styles.setupActions}>
+        <ToolbarButton
+          onClick={() =>
+            startDotsGameSession({
+              rowsStr,
+              colsStr,
+              name0,
+              name1,
+              cellSizePx: defaults.cellSizePx,
+              t,
+              setSetupError,
+              setSession
             })
           }
-          onContextMenu={(e) => e.preventDefault()}
         >
-          <svg className={styles.gridSvg} width={width} height={height} role="img" aria-label={t("boardAria")}>
-            <title>{t("boardAria")}</title>
-            {gridLinesData.map((l) => (
-              <line
-                key={l.key}
-                x1={l.x1}
-                y1={l.y1}
-                x2={l.x2}
-                y2={l.y2}
-                stroke="var(--dots-grid)"
-                strokeWidth={1}
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-            {polygonData.map((p) => (
-              <polygon key={p.key} points={p.points} fill={p.fill} fillOpacity={0.22} stroke={p.fill} strokeWidth={2} />
-            ))}
-            {previewPoints ? (
-              <polyline
-                fill="none"
-                stroke={previewStroke}
-                strokeWidth={2}
-                strokeDasharray="6 4"
-                points={previewPoints}
-              />
-            ) : null}
-          </svg>
-          <div className={styles.dotsLayer}>
-            {dotData.map((d) => (
-              <div
-                key={d.key}
-                className={`${styles.dot} ${dotClassFor(d.owner, d.blocked, dotClassMap)}${
-                  pendingDotKey && d.key === pendingDotKey ? ` ${styles.dotPending}` : ""
-                }`}
-                style={{ left: d.left, top: d.top }}
-              />
-            ))}
-          </div>
-        </div>
+          {t("startGame")}
+        </ToolbarButton>
       </div>
-      {winnerText ? <div className={styles.overlay}>{winnerText}</div> : null}
     </div>
   );
 }

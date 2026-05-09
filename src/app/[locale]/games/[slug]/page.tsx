@@ -54,14 +54,7 @@ export default async function GamePage({ params }: GamePageProps): Promise<React
 
   if (slug === "dots") {
     return (
-      <GamePageView
-        backLink={
-          <Link href="/" prefetch={false}>
-            {tPage("back")}
-          </Link>
-        }
-        title={title}
-      >
+      <GamePageView title={title}>
         <DotsGame />
       </GamePageView>
     );

@@ -6,11 +6,18 @@ import {
   defaultDotsConfig,
   ringFromChainPath
 } from "./logic";
-import type { DotsGameAction, DotsGameState, FilledPolygon, GridPoint, PlayerId, UndoEntry } from "./types";
+import type {
+  DotsGameAction,
+  DotsGameConfig,
+  DotsGameState,
+  FilledPolygon,
+  GridPoint,
+  PlayerId,
+  UndoEntry
+} from "./types";
 
-/** Initial board, scores, and empty polygon state for a new session. */
-export function initialDotsGameState(): DotsGameState {
-  const config = defaultDotsConfig();
+/** Initial board, scores, and empty polygon state for a given grid config. */
+export function initialDotsGameStateFromConfig(config: DotsGameConfig): DotsGameState {
   return {
     config,
     cells: createEmptyGrid(config),
@@ -25,6 +32,11 @@ export function initialDotsGameState(): DotsGameState {
     polygons: [],
     undoStack: []
   };
+}
+
+/** Initial board using `defaultDotsConfig()` dimensions. */
+export function initialDotsGameState(): DotsGameState {
+  return initialDotsGameStateFromConfig(defaultDotsConfig());
 }
 
 /** Player to place the next dot: even count → player 0, odd → player 1. */
@@ -337,7 +349,7 @@ export function reduceDotsGame(state: DotsGameState, action: DotsGameAction): Do
 
   switch (action.type) {
     case "CLEAR":
-      return initialDotsGameState();
+      return initialDotsGameStateFromConfig(state.config);
     case "SURRENDER":
       return handleSurrender(state);
     case "ACCEPT":

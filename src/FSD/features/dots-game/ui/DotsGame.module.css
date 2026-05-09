@@ -1,44 +1,72 @@
-.wrap {
-  --dots-p0: #3b82f6;
+.setup {
   --dots-p1: #ef4444;
-  --dots-grid: var(--border-subtle);
-  --dots-board-bg: var(--bg-card);
-  --dots-preview: var(--accent);
-  --dots-blocked-empty: color-mix(in srgb, var(--text-muted) 35%, transparent);
-  margin-top: 20px;
+  margin-top: 4px;
 }
 
-.toolbar {
+.setupBack {
+  margin-bottom: 16px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.backLink:hover {
+  opacity: 0.85;
+}
+
+.setupFields {
+  display: grid;
+  gap: 14px 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 640px;
+  margin-bottom: 16px;
+}
+
+.setupLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.setupInput {
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.setupInput::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.setupError {
+  margin: 0 0 12px;
+  max-width: 48ch;
+  font-size: 0.9rem;
+  color: var(--dots-p1);
+  font-weight: 500;
+}
+
+.setupActions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-  margin-bottom: 14px;
-}
-
-.scores {
-  display: flex;
-  gap: 18px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.scoreP0 {
-  color: var(--dots-p0);
-}
-
-.scoreP1 {
-  color: var(--dots-p1);
-}
-
-.turn {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-}
-
-.turnStrong {
-  color: var(--text-primary);
-  font-weight: 600;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .hint {
@@ -47,88 +75,4 @@
   line-height: 1.55;
   color: var(--text-muted);
   font-size: 0.92rem;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.boardWrap {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  background: var(--dots-board-bg);
-  box-shadow: var(--shadow-card);
-  padding: 12px;
-  width: fit-content;
-  max-width: 100%;
-  overflow: auto;
-  touch-action: manipulation;
-}
-
-.board {
-  position: relative;
-  touch-action: none;
-  user-select: none;
-}
-
-.gridSvg {
-  display: block;
-}
-
-.dotsLayer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.dot {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  margin-left: -5px;
-  margin-top: -5px;
-  border-radius: 3px;
-  box-sizing: border-box;
-}
-
-@keyframes pendingDotPulse {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0.5;
-  }
-}
-
-.dotPending {
-  animation: pendingDotPulse 0.9s ease-in-out infinite alternate;
-}
-
-.dotP0 {
-  background: var(--dots-p0);
-  border: 1px solid color-mix(in srgb, var(--dots-p0) 55%, #000);
-}
-
-.dotP1 {
-  background: var(--dots-p1);
-  border: 1px solid color-mix(in srgb, var(--dots-p1) 55%, #000);
-}
-
-.dotBlockedEmpty {
-  background: var(--dots-blocked-empty);
-  border: 1px solid var(--border-subtle);
-  border-radius: 50%;
-}
-
-.overlay {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  font-weight: 600;
 }

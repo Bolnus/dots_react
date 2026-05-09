@@ -43,9 +43,9 @@
 
 .actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 20px;
+  overflow-y: auto;
 }
 
 .boardWrap {

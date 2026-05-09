@@ -1,9 +1,8 @@
 import type { ReactElement } from "react";
 import { getTranslations } from "next-intl/server";
 
-import { LocaleSwitcher } from "./LocaleSwitcher";
-import { ThemeSwitcher } from "./ThemeSwitcher";
 import styles from "./AppHeader.module.css";
+import { AppHeaderControls } from "./AppHeaderControls.client";
 
 /** Top bar with site title, theme switcher, and locale switcher. */
 export async function AppHeader(): Promise<ReactElement> {
@@ -15,10 +14,7 @@ export async function AppHeader(): Promise<ReactElement> {
         <span className={styles.logo}>{t("title")}</span>
         <span className={styles.tagline}>{t("description")}</span>
       </div>
-      <div className={styles.controls}>
-        <ThemeSwitcher />
-        <LocaleSwitcher />
-      </div>
+      <AppHeaderControls />
     </header>
   );
 }

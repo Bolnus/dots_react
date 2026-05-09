@@ -9,10 +9,6 @@
 }
 
 .toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
   margin-bottom: 14px;
 }
 
@@ -31,14 +27,14 @@
   color: var(--dots-p1);
 }
 
-.turn {
-  color: var(--text-muted);
-  font-size: 0.95rem;
+.turnSlot {
+  flex: 1;
+  min-width: 0;
 }
 
-.turnStrong {
-  color: var(--text-primary);
-  font-weight: 600;
+.turnLine {
+  color: var(--text-muted);
+  font-size: 0.95rem;
 }
 
 .actions {

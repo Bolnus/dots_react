@@ -8,6 +8,7 @@ import { useDotsGame } from "../model/useDotsGame";
 import type { DotsGameConfig, PlayerId } from "../model/types";
 
 import styles from "./DotsGamePlay.module.css";
+import { ExpandableEllipsisText } from "@/FSD/shared/ui/expandable-ellipsis-text/ExpandableEllipsisText";
 import { ToolbarButton } from "@/FSD/shared/ui/toolbar-button/ToolbarButton";
 import {
   buildDotData,
@@ -125,8 +126,13 @@ export function DotsGamePlay({ config, playerLabels, onExit }: DotsGamePlayProps
             {playerLabels.player1}: {scores.player1}
           </span>
         </div>
-        <div className={styles.turn}>
-          <span className={styles.turnStrong}>{t("statusLabel")}</span> {turnLabel}
+        <div className={styles.turnSlot}>
+          <ExpandableEllipsisText
+            className={styles.turnLine}
+            prefix={t("statusLabel")}
+            text={turnLabel}
+            toggleAriaLabel={t("turnLineToggleAria")}
+          />
         </div>
       </div>
       <div className={styles.actions}>

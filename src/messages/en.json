@@ -26,6 +26,7 @@
     "player0": "Player 1 (blue)",
     "player1": "Player 2 (red)",
     "statusLabel": "Turn:",
+    "turnLineToggleAria": "Show or hide full turn status",
     "turnPlace": "{player} places a dot",
     "turnDrawing": "Complete the enclosure: click adjacent dots of your color and return to the start",
     "turnEnded": "Game over",

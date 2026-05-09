@@ -18,9 +18,9 @@ import {
   formatWinnerText,
   handleBoardMouseDown,
   handleEscapeKey,
-  onBoardTouchEnd,
+  onBoardTouchEndPreventDefault,
   onBoardTouchMove,
-  onBoardTouchStart
+  onBoardTouchStartPreventDefault
 } from "./DotsGameUtils";
 import type { DotClassMap, MutablePoint } from "./DotsGameTypes";
 
@@ -69,15 +69,16 @@ export function DotsGame(): ReactElement {
       polygonClick
     });
 
-    const onTouchStart = (e: TouchEvent): void => onBoardTouchStart({ tapStart, lastMid, didTwoFingerScroll }, e);
+    const onTouchStart = (e: TouchEvent): void =>
+      onBoardTouchStartPreventDefault({ tapStart, lastMid, didTwoFingerScroll }, e);
     const onTouchMove = (e: TouchEvent): void => onBoardTouchMove({ wrapEl, tapStart, lastMid, didTwoFingerScroll }, e);
     const onTouchEnd = (e: TouchEvent): void =>
-      onBoardTouchEnd({ tapStart, lastMid, didTwoFingerScroll, getBoardDownArgs }, e);
+      onBoardTouchEndPreventDefault({ tapStart, lastMid, didTwoFingerScroll, getBoardDownArgs }, e);
 
-    boardEl.addEventListener("touchstart", onTouchStart, { passive: true });
+    boardEl.addEventListener("touchstart", onTouchStart, { passive: false });
     boardEl.addEventListener("touchmove", onTouchMove, { passive: false });
-    boardEl.addEventListener("touchend", onTouchEnd, { passive: true });
-    boardEl.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    boardEl.addEventListener("touchend", onTouchEnd, { passive: false });
+    boardEl.addEventListener("touchcancel", onTouchEnd, { passive: false });
 
     return () => {
       boardEl.removeEventListener("touchstart", onTouchStart);

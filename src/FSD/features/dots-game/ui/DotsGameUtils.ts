@@ -42,6 +42,11 @@ export function handleBoardMouseDown(
   boardRef: RefObject<HTMLDivElement | null>,
   handlers: BoardPointerHandlers
 ): void {
+  const native = e.nativeEvent;
+  const { sourceCapabilities } = native as unknown as { sourceCapabilities?: { firesTouchEvents?: boolean } };
+  if (sourceCapabilities?.firesTouchEvents) {
+    return;
+  }
   if (handlers.mode === "ended") {
     return;
   }
@@ -161,6 +166,17 @@ export function onBoardTouchStart(ctx: TouchStartCtx, e: TouchEvent): void {
   }
 }
 
+/**
+ * Touchstart wrapper for the board: prevents one-finger browser scrolling and delegates to `onBoardTouchStart`.
+ * Keeping this in utils avoids nested handler bodies in components.
+ */
+export function onBoardTouchStartPreventDefault(ctx: TouchStartCtx, e: TouchEvent): void {
+  if (e.touches.length === 1) {
+    e.preventDefault();
+  }
+  onBoardTouchStart(ctx, e);
+}
+
 /** Converts a two-finger drag into scrolling of the surrounding board wrapper. */
 export function onBoardTouchMove(ctx: TouchMoveCtx, e: TouchEvent): void {
   if (e.touches.length !== 2) {
@@ -206,6 +222,15 @@ export function onBoardTouchEnd(ctx: TouchEndCtx, e: TouchEvent): void {
   }
   clearPoint(ctx.lastMid);
   clearPoint(ctx.tapStart);
+}
+
+/**
+ * Touchend wrapper for the board: prevents browser gesture defaults and delegates to `onBoardTouchEnd`.
+ * Keeping this in utils avoids nested handler bodies in components.
+ */
+export function onBoardTouchEndPreventDefault(ctx: TouchEndCtx, e: TouchEvent): void {
+  e.preventDefault();
+  onBoardTouchEnd(ctx, e);
 }
 
 /** Esc cancels polygon drawing / undoes the last step. */

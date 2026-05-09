@@ -236,7 +236,7 @@ function handleUndo(state: DotsGameState): DotsGameState {
   return popUndoEntry(state);
 }
 
-/** */
+/** Commits the pending dot when in play mode (Accept action or second tap on that dot). */
 function handleAccept(state: DotsGameState): DotsGameState {
   if (state.mode !== "play") {
     return state;
@@ -255,6 +255,10 @@ function handlePlaceLmb(state: DotsGameState, point: GridPoint): DotsGameState {
   const player = currentPlacingPlayer(state.dotsPlacedCount);
 
   if (state.pendingDot) {
+    // Second tap on the pending dot accepts the turn (same as the Accept control).
+    if (isSamePoint(state.pendingDot, point)) {
+      return commitPendingDot(state);
+    }
     // Move pending placement to another empty point (same turn).
     if (canPlaceAt(state.cells, point)) {
       const cleared = clearDotAt(state, state.pendingDot);

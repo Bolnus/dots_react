@@ -14,32 +14,16 @@ export type ExpandableEllipsisTextProps = Readonly<{
   toggleAriaLabel: string;
 }>;
 
-/** Subscribes to outside pointer events to run `onOutside`. */
-function addOutsideCloseListeners(root: HTMLElement, onOutside: () => void): () => void {
-  const handlePointer = (event: MouseEvent | TouchEvent): void => {
-    if (!(event.target instanceof Node) || !root.contains(event.target)) {
-      onOutside();
-    }
-  };
-  document.addEventListener("mousedown", handlePointer);
-  document.addEventListener("touchstart", handlePointer, { capture: true });
-  return () => {
-    document.removeEventListener("mousedown", handlePointer);
-    document.removeEventListener("touchstart", handlePointer, { capture: true });
-  };
-}
+function handlePointer(root: HTMLElement, onOutside: () => void, event: MouseEvent | TouchEvent): void {
+  if (!(event.target instanceof Node) || !root.contains(event.target)) {
+    onOutside();
+  }
+};
 
-/** Subscribes to Escape to run `onEscape`. */
-function addEscapeCloseListener(onEscape: () => void): () => void {
-  const handleKey = (event: KeyboardEvent): void => {
-    if (event.key === "Escape") {
-      onEscape();
-    }
-  };
-  window.addEventListener("keydown", handleKey);
-  return () => {
-    window.removeEventListener("keydown", handleKey);
-  };
+function handleKey(onEscape: () => void, event: KeyboardEvent) {
+  if (event.key === "Escape") {
+    onEscape();
+  }
 }
 
 /**
@@ -63,11 +47,15 @@ export function ExpandableEllipsisText({
     if (!root) {
       return undefined;
     }
-    const removeOutside = addOutsideCloseListeners(root, () => setIsOpen(false));
-    const removeEscape = addEscapeCloseListener(() => setIsOpen(false));
+    const handlePointerLocal = (event: MouseEvent | TouchEvent): void => handlePointer(root, () => setIsOpen(false), event);
+    const handleKeyLocal = (event: KeyboardEvent): void => handleKey(() => setIsOpen(false), event);
+    document.addEventListener("mousedown", handlePointerLocal);
+    document.addEventListener("touchstart", handlePointerLocal, { capture: true });
+    window.addEventListener("keydown", handleKeyLocal);
     return () => {
-      removeOutside();
-      removeEscape();
+      document.removeEventListener("mousedown", handlePointerLocal);
+      document.removeEventListener("touchstart", handlePointerLocal, { capture: true });
+      window.removeEventListener("keydown", handleKeyLocal);
     };
   }, [isOpen]);
 

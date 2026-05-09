@@ -1,0 +1,337 @@
+"use client";
+
+import type { RefObject } from "react";
+import type { useTranslations } from "next-intl";
+
+import type { CellState, FilledPolygon, GridPoint, PlayerId } from "../model/types";
+import type { BoardDownArgs, BoardPointerHandlers, DotClassMap, MutablePoint } from "./DotsGameTypes";
+
+const TAP_MOVE_THRESHOLD_PX = 8;
+
+type HitTestArgs = Readonly<{
+  clientX: number;
+  clientY: number;
+  el: HTMLElement;
+  cellSize: number;
+  rows: number;
+  cols: number;
+}>;
+
+/** Maps a pointer location to the nearest grid intersection. */
+function hitTestGrid(args: HitTestArgs): GridPoint | null {
+  const { clientX, clientY, el, cellSize, rows, cols } = args;
+  const rect = el.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const c = Math.round(x / cellSize);
+  const r = Math.round(y / cellSize);
+  if (r < 0 || c < 0 || r >= rows || c >= cols) {
+    return null;
+  }
+  return { r, c };
+}
+
+/** Stable key for a polygon based on its ring vertices. */
+function polygonDomKey(ring: readonly GridPoint[]): string {
+  return ring.map((p) => `${p.r}x${p.c}`).join("-");
+}
+
+/** Handles LMB/RMB click semantics for placing and enclosure tracing. */
+export function handleBoardMouseDown(
+  e: React.MouseEvent<HTMLDivElement>,
+  boardRef: RefObject<HTMLDivElement | null>,
+  handlers: BoardPointerHandlers
+): void {
+  if (handlers.mode === "ended") {
+    return;
+  }
+  const el = boardRef.current;
+  if (!el) {
+    return;
+  }
+  const p = hitTestGrid({
+    clientX: e.clientX,
+    clientY: e.clientY,
+    el,
+    cellSize: handlers.cellSizePx,
+    rows: handlers.rows,
+    cols: handlers.cols
+  });
+  if (!p) {
+    return;
+  }
+  if (e.button === 2) {
+    e.preventDefault();
+    if (handlers.mode === "play") {
+      handlers.placeRmb(p);
+    }
+    return;
+  }
+  if (e.button !== 0) {
+    return;
+  }
+  if (handlers.mode === "drawPolygon") {
+    handlers.polygonClick(p);
+    return;
+  }
+  handlers.placeLmb(p);
+}
+
+/** Runs a board action for a given client coordinate (mouse/touch). */
+export function handleBoardDown(args: BoardDownArgs): void {
+  const { clientX, clientY, boardEl, mode, cellSizePx, rows, cols, isRmb, placeLmb, placeRmb, polygonClick } = args;
+  if (mode === "ended") {
+    return;
+  }
+  const p = hitTestGrid({ clientX, clientY, el: boardEl, cellSize: cellSizePx, rows, cols });
+  if (!p) {
+    return;
+  }
+  if (isRmb) {
+    if (mode === "play") {
+      placeRmb(p);
+    }
+    return;
+  }
+  if (mode === "drawPolygon") {
+    polygonClick(p);
+    return;
+  }
+  placeLmb(p);
+}
+
+type MutableBool = { value: boolean };
+
+/** Returns the class for a dot based on its owner and blocked status. */
+export function dotClassFor(owner: PlayerId | null, blocked: boolean, classes: DotClassMap): string {
+  if (owner === "player0") {
+    return classes.p0;
+  }
+  if (owner === "player1") {
+    return classes.p1;
+  }
+  return blocked ? classes.blockedEmpty : "";
+}
+
+/** Writes the midpoint of two touches into `out` (stable reference). */
+function touchMidpoint(a: Touch, b: Touch, out: MutablePoint): void {
+  out.x = (a.clientX + b.clientX) / 2;
+  out.y = (a.clientY + b.clientY) / 2;
+}
+
+/** Clears a mutable point by setting its coordinates to null. */
+function clearPoint(p: MutablePoint): void {
+  p.x = null;
+  p.y = null;
+}
+
+/** True when both coordinates are present (non-null). */
+function isPointSet(p: MutablePoint): p is { x: number; y: number } {
+  return p.x !== null && p.y !== null;
+}
+
+type TouchStartCtx = Readonly<{
+  tapStart: MutablePoint;
+  lastMid: MutablePoint;
+  didTwoFingerScroll: MutableBool;
+}>;
+
+type TouchMoveCtx = Readonly<{
+  wrapEl: HTMLElement;
+  tapStart: MutablePoint;
+  lastMid: MutablePoint;
+  didTwoFingerScroll: MutableBool;
+}>;
+
+type TouchEndCtx = Readonly<{
+  tapStart: MutablePoint;
+  lastMid: MutablePoint;
+  didTwoFingerScroll: MutableBool;
+  getBoardDownArgs: (clientX: number, clientY: number) => BoardDownArgs;
+}>;
+
+/** Tracks initial tap point or switches into two-finger scroll mode. */
+export function onBoardTouchStart(ctx: TouchStartCtx, e: TouchEvent): void {
+  if (e.touches.length === 1) {
+    ctx.tapStart.x = e.touches[0].clientX;
+    ctx.tapStart.y = e.touches[0].clientY;
+    ctx.didTwoFingerScroll.value = false;
+  }
+  if (e.touches.length === 2) {
+    clearPoint(ctx.tapStart);
+    ctx.didTwoFingerScroll.value = true;
+    touchMidpoint(e.touches[0], e.touches[1], ctx.lastMid);
+  }
+}
+
+/** Converts a two-finger drag into scrolling of the surrounding board wrapper. */
+export function onBoardTouchMove(ctx: TouchMoveCtx, e: TouchEvent): void {
+  if (e.touches.length !== 2) {
+    clearPoint(ctx.lastMid);
+    if (isPointSet(ctx.tapStart) && e.touches.length === 1) {
+      const dx = e.touches[0].clientX - ctx.tapStart.x;
+      const dy = e.touches[0].clientY - ctx.tapStart.y;
+      if (Math.hypot(dx, dy) > TAP_MOVE_THRESHOLD_PX) {
+        clearPoint(ctx.tapStart);
+      }
+    } else if (e.touches.length !== 1) {
+      clearPoint(ctx.tapStart);
+    }
+    return;
+  }
+
+  const mid: MutablePoint = { x: null, y: null };
+  touchMidpoint(e.touches[0], e.touches[1], mid);
+  if (!isPointSet(ctx.lastMid) || !isPointSet(mid)) {
+    ctx.lastMid.x = mid.x;
+    ctx.lastMid.y = mid.y;
+    return;
+  }
+
+  e.preventDefault();
+  clearPoint(ctx.tapStart);
+  ctx.didTwoFingerScroll.value = true;
+
+  const dx = mid.x - ctx.lastMid.x;
+  const dy = mid.y - ctx.lastMid.y;
+  ctx.wrapEl.scrollLeft -= dx;
+  ctx.wrapEl.scrollTop -= dy;
+  ctx.lastMid.x = mid.x;
+  ctx.lastMid.y = mid.y;
+}
+
+/** Triggers a board tap only if no two-finger scroll was detected. */
+export function onBoardTouchEnd(ctx: TouchEndCtx, e: TouchEvent): void {
+  if (isPointSet(ctx.tapStart) && !ctx.didTwoFingerScroll.value && e.changedTouches.length >= 1) {
+    const [touch] = e.changedTouches;
+    const args = ctx.getBoardDownArgs(touch.clientX, touch.clientY);
+    handleBoardDown(args);
+  }
+  clearPoint(ctx.lastMid);
+  clearPoint(ctx.tapStart);
+}
+
+/** Esc cancels polygon drawing / undoes the last step. */
+export function handleEscapeKey(e: KeyboardEvent, undo: () => void): void {
+  if (e.key === "Escape") {
+    undo();
+  }
+}
+
+type BoardDims = Readonly<{
+  rows: number;
+  cols: number;
+  cellSizePx: number;
+  width: number;
+  height: number;
+}>;
+
+type GridLineData = Readonly<{
+  key: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}>;
+
+/** Produces grid lines as data so JSX can map them. */
+export function buildGridLinesData(dims: BoardDims): GridLineData[] {
+  const { cols, rows, cellSizePx, width, height } = dims;
+  const lines: GridLineData[] = [];
+  for (let c = 0; c < cols; c++) {
+    const x = c * cellSizePx;
+    lines.push({ key: `v-${c}`, x1: x, y1: 0, x2: x, y2: height });
+  }
+  for (let r = 0; r < rows; r++) {
+    const y = r * cellSizePx;
+    lines.push({ key: `h-${r}`, x1: 0, y1: y, x2: width, y2: y });
+  }
+  return lines;
+}
+
+type PolygonData = Readonly<{
+  key: string;
+  points: string;
+  fill: string;
+}>;
+
+/** Produces polygon fill/stroke data for mapping in JSX. */
+export function buildPolygonData(polygons: readonly FilledPolygon[], cellSizePx: number): PolygonData[] {
+  return polygons.map((poly: FilledPolygon) => ({
+    key: polygonDomKey(poly.ring),
+    points: poly.ring.map((p: GridPoint) => `${p.c * cellSizePx},${p.r * cellSizePx}`).join(" "),
+    fill: poly.owner === "player0" ? "var(--dots-p0)" : "var(--dots-p1)"
+  }));
+}
+
+/** Produces the polyline points string for the currently traced chain (if any). */
+export function buildPreviewPoints(
+  mode: "play" | "drawPolygon" | "ended",
+  chainPath: readonly GridPoint[],
+  cellSizePx: number
+): string | null {
+  if (mode !== "drawPolygon" || chainPath.length === 0) {
+    return null;
+  }
+  return chainPath.map((p: GridPoint) => `${p.c * cellSizePx},${p.r * cellSizePx}`).join(" ");
+}
+
+type DotData = Readonly<{
+  key: string;
+  left: number;
+  top: number;
+  owner: PlayerId | null;
+  blocked: boolean;
+}>;
+
+/** Produces dot layer divs as data for mapping in JSX. */
+export function buildDotData(cells: readonly CellState[][], cellSizePx: number): DotData[] {
+  const dots: DotData[] = [];
+  for (let r = 0; r < cells.length; r++) {
+    for (let c = 0; c < cells[r].length; c++) {
+      const cell = cells[r][c];
+      if (cell.owner === null && !cell.blocked) {
+        continue;
+      }
+      dots.push({
+        key: `d-${r}-${c}`,
+        left: c * cellSizePx,
+        top: r * cellSizePx,
+        owner: cell.owner,
+        blocked: cell.blocked
+      });
+    }
+  }
+  return dots;
+}
+
+/** Formats the status label for the current mode. */
+export function formatTurnLabel(
+  t: ReturnType<typeof useTranslations>,
+  mode: "play" | "drawPolygon" | "ended",
+  playerName: string
+): string {
+  if (mode === "drawPolygon") {
+    return t("turnDrawing");
+  }
+  if (mode === "ended") {
+    return t("turnEnded");
+  }
+  return t("turnPlace", { player: playerName });
+}
+
+/** Formats the winner overlay string, including surrender messaging. */
+export function formatWinnerText(
+  t: ReturnType<typeof useTranslations>,
+  winner: PlayerId | null,
+  surrenderedBy: PlayerId | null
+): string | null {
+  if (winner === null) {
+    return null;
+  }
+  const winnerName = winner === "player0" ? t("player0") : t("player1");
+  if (surrenderedBy !== null) {
+    return t("resultSurrender", { winner: winnerName });
+  }
+  return t("resultWin", { winner: winnerName });
+}

@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import { getTranslations } from "next-intl/server";
 
+import { Link } from "@/FSD/shared/lib/i18n/navigation";
+
 import styles from "./AppHeader.module.css";
 import { AppHeaderControls } from "./AppHeaderControls.client";
 
@@ -10,10 +12,10 @@ export async function AppHeader(): Promise<ReactElement> {
 
   return (
     <header className={styles.header}>
-      <div className={styles.brand}>
+      <Link href="/" prefetch={false} className={styles.brand}>
         <span className={styles.logo}>{t("title")}</span>
         <span className={styles.tagline}>{t("description")}</span>
-      </div>
+      </Link>
       <AppHeaderControls />
     </header>
   );

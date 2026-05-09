@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, ReactElement, RefObject, SetStateAction } from "react";
+import type { ReactElement, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
@@ -23,23 +23,19 @@ function getHeaderControlsDropdownClassName(isOpen: boolean, dropdownClass: stri
 }
 
 /** Closes the menu when the user presses outside the controls root while it is open. */
-function onPointerDown(
-  event: PointerEvent,
-  isOpen: boolean,
-  rootRef: RefObject<HTMLDivElement | null>,
-  setIsOpen: Dispatch<SetStateAction<boolean>>
-): void {
-  if (!isOpen) {
-    return;
+function onPointerDown(event: PointerEvent, rootRef: RefObject<HTMLDivElement | null>, prevIsOpen: boolean): boolean {
+  if (!prevIsOpen) {
+    return false;
   }
   const rootNode = rootRef.current;
   const { target } = event;
   if (!rootNode || !(target instanceof Node)) {
-    return;
+    return true;
   }
   if (!rootNode.contains(target)) {
-    setIsOpen(false);
+    return false;
   }
+  return true;
 }
 
 /** Interactive header controls with adaptive dropdown for small screens. */
@@ -51,7 +47,7 @@ export function AppHeaderControls(): ReactElement {
     if (!isOpen) {
       return undefined;
     }
-    const handlePointerDown = (event: PointerEvent): void => onPointerDown(event, isOpen, rootRef, setIsOpen);
+    const handlePointerDown = (event: PointerEvent): void => setIsOpen((prev) => onPointerDown(event, rootRef, prev));
     document.addEventListener("pointerdown", handlePointerDown, true);
     return () => document.removeEventListener("pointerdown", handlePointerDown, true);
   }, [isOpen]);

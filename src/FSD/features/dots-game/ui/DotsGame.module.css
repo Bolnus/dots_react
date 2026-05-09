@@ -89,11 +89,12 @@
   width: fit-content;
   max-width: 100%;
   overflow: auto;
+  touch-action: manipulation;
 }
 
 .board {
   position: relative;
-  touch-action: none;
+  /* touch-action: none; */
   user-select: none;
 }
 

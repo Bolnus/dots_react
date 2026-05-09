@@ -9,9 +9,9 @@ import type { DotsGameConfig, PlayerId } from "../model/types";
 import styles from "./DotsGame.module.css";
 import { DotsGameBackLink } from "./DotsGameBackLink";
 import { DotsGamePlay } from "./DotsGamePlay";
+import { DotsGameStartButton } from "./DotsGameStartButton";
 import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
 import { NumberInputType } from "@/FSD/shared/ui/input/types";
-import { ToolbarButton } from "@/FSD/shared/ui/toolbar-button/ToolbarButton";
 
 const GRID_MIN = 3;
 const GRID_MAX = 60;
@@ -72,7 +72,14 @@ export function DotsGame(): ReactElement {
   const [session, setSession] = useState<Session | null>(null);
 
   if (session) {
-    return <DotsGamePlay key={session.key} config={session.config} playerLabels={session.labels} />;
+    return (
+      <DotsGamePlay
+        key={session.key}
+        config={session.config}
+        playerLabels={session.labels}
+        onExit={() => setSession(null)}
+      />
+    );
   }
 
   return (
@@ -115,7 +122,7 @@ export function DotsGame(): ReactElement {
       </div>
       {setupError ? <p className={styles.setupError}>{setupError}</p> : null}
       <div className={styles.setupActions}>
-        <ToolbarButton
+        <DotsGameStartButton
           onClick={() =>
             startDotsGameSession({
               rows,
@@ -130,7 +137,7 @@ export function DotsGame(): ReactElement {
           }
         >
           {t("startGame")}
-        </ToolbarButton>
+        </DotsGameStartButton>
       </div>
     </div>
   );

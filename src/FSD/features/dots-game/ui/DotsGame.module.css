@@ -65,8 +65,11 @@
 .setupActions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 8px 0 16px;
+  width: 100%;
+  max-width: 72ch;
 }
 
 .hint {

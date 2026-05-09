@@ -29,15 +29,15 @@ import type { DotClassMap, MutablePoint } from "./DotsGameTypes";
 type DotsGamePlayProps = Readonly<{
   config: DotsGameConfig;
   playerLabels: Readonly<Record<PlayerId, string>>;
+  onExit: () => void;
 }>;
 
 /** In-game board, scoring, and actions (stage 2). */
-export function DotsGamePlay({ config, playerLabels }: DotsGamePlayProps): ReactElement {
+export function DotsGamePlay({ config, playerLabels, onExit }: DotsGamePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
   const boardRef = useRef<HTMLDivElement | null>(null);
   const boardWrapRef = useRef<HTMLDivElement | null>(null);
-  const { state, placeLmb, placeRmb, polygonClick, accept, undo, clear, surrender, currentPlayer } =
-    useDotsGame(config);
+  const { state, placeLmb, placeRmb, polygonClick, accept, undo, surrender, currentPlayer } = useDotsGame(config);
   const { cells, scores, mode, chainPath, polygons, winner, surrenderedBy, pendingDot } = state;
   const { cellSizePx, rows, cols } = state.config;
   const width = (cols - 1) * cellSizePx;
@@ -134,7 +134,7 @@ export function DotsGamePlay({ config, playerLabels }: DotsGamePlayProps): React
           {t("accept")}
         </ToolbarButton>
         <ToolbarButton onClick={undo}>{t("undo")}</ToolbarButton>
-        <ToolbarButton onClick={clear}>{t("clear")}</ToolbarButton>
+        <ToolbarButton onClick={onExit}>{t("exit")}</ToolbarButton>
         <ToolbarButton onClick={surrender} disabled={state.mode === "ended"}>
           {t("surrender")}
         </ToolbarButton>

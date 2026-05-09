@@ -1,24 +1,30 @@
-.textInput
-{
-    width: 100%;
-    box-shadow: none;
-    -webkit-box-shadow: none;
-    background-clip: padding-box;
-    -webkit-background-clip: padding-box;
-    display: flex;
-    align-items: center;
+.textInput {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
 }
 
-.textInput__input
-{
-    box-sizing: border-box;
-    background: inherit;
-    flex: 1 1 0;
-    min-width: 10px;
-    width: 0;
+.textInput__input {
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
 }
 
-.textInput__input::placeholder
-{
-    color: hsl(0, 0%, 50%);
+.textInput__input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
 }

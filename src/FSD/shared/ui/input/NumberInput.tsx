@@ -1,170 +1,241 @@
-import React from "react";
-import classes from "./numberInput.module.scss";
+"use client";
+
+import { useState, type ChangeEvent, type HTMLAttributes, type ReactElement } from "react";
+
+import styles from "./NumberInput.module.css";
 import { NumberInputType } from "./types";
 
-interface TextInputProps {
-    value?: number;
-    onChange?: (num: number | undefined) => void;
-    isClearable?: boolean;
-    disabled?: boolean;
-    className?: string;
-    placeholder?: string;
-    type?: NumberInputType;
-    requiredValue?: number;
-}
+export type NumberInputProps = Readonly<{
+  value?: number;
+  onChange?: (num: number | undefined) => void;
+  disabled?: boolean;
+  className?: string;
+  placeholder?: string;
+  type?: NumberInputType;
+  requiredValue?: number;
+  /** When set, the committed value after blur is clamped to this minimum. */
+  min?: number;
+  /** When set, the committed value after blur is clamped to this maximum. */
+  max?: number;
+  inputMode?: HTMLAttributes<HTMLInputElement>["inputMode"];
+}>;
 
+/** Workaround for mobile browsers shifting scroll on numeric input blur. */
 export function resetScrollOnBlur(): void {
-    window.scrollTo(0, 0);
+  window.scrollTo(0, 0);
 }
 
-function toNumberByType(text: string, type: NumberInputType): number | undefined {
-    let regExp: RegExp;
-    switch (type) {
-        case NumberInputType.Unsigned:
-            regExp = /^\d+$/;
-            break;
-        case NumberInputType.Interger:
-            regExp = /^-?\d+$/;
-            break;
-        case NumberInputType.Float:
-            regExp = /^-?\d+(\.\d+)?$/;
-            break;
-        default:
-            regExp = /.?/;
-            break;
-    }
-    const numberValue = Number(text);
-    if (regExp.test(text) && numberValue > Number.MIN_SAFE_INTEGER && numberValue < Number.MAX_SAFE_INTEGER) {
-        return numberValue;
-    }
-    return undefined;
+/** Parses a complete numeric string for the given input kind. */
+function toNumberByType(text: string, inputType: NumberInputType): number | undefined {
+  let regExp: RegExp;
+  switch (inputType) {
+    case NumberInputType.Unsigned:
+      regExp = /^\d+$/;
+      break;
+    case NumberInputType.Interger:
+      regExp = /^-?\d+$/;
+      break;
+    case NumberInputType.Float:
+      regExp = /^-?\d+(\.\d+)?$/;
+      break;
+    default:
+      regExp = /.?/;
+      break;
+  }
+  const numberValue = Number(text);
+  if (regExp.test(text) && numberValue > Number.MIN_SAFE_INTEGER && numberValue < Number.MAX_SAFE_INTEGER) {
+    return numberValue;
+  }
+  return undefined;
 }
 
+/** Parses a non-negative integer string. */
 export function toUnsigned(text: string): number | undefined {
-    return toNumberByType(text, NumberInputType.Unsigned);
+  return toNumberByType(text, NumberInputType.Unsigned);
 }
 
+/** Parses a signed integer string. */
 export function toInteger(text: string): number | undefined {
-    return toNumberByType(text, NumberInputType.Interger);
+  return toNumberByType(text, NumberInputType.Interger);
 }
 
+/** Parses a signed decimal string. */
 export function toFloat(text: string): number | undefined {
-    return toNumberByType(text, NumberInputType.Float);
+  return toNumberByType(text, NumberInputType.Float);
 }
 
-function onInputChange(
-    localEvent: React.ChangeEvent<HTMLInputElement>,
-    type: NumberInputType,
-    onChange?: (num: string) => void
-) {
-    localEvent.preventDefault();
-    if (!onChange) {
-        return;
-    }
-    const inputElement = localEvent.target;
-    if (inputElement.value === "" || inputElement.value === undefined) {
-        onChange("");
-    } else if (typeof inputElement.value === "string") {
-        switch (type) {
-            case NumberInputType.Unsigned:
-                if (/^\d*$/.test(inputElement.value)) {
-                    onChange(inputElement.value);
-                }
-                break;
-            case NumberInputType.Interger:
-                if (/^-?\d*$/.test(inputElement.value)) {
-                    onChange(inputElement.value);
-                }
-                break;
-            case NumberInputType.Float:
-                if (/^-?\d*(\.\d*)?$/.test(inputElement.value)) {
-                    onChange(inputElement.value);
-                }
-                break;
-            default:
-                break;
-        }
-    }
+/** Applies optional inclusive min/max bounds. */
+function clampToOptionalBounds(value: number, min?: number, max?: number): number {
+  let result = value;
+  if (min !== undefined) {
+    result = Math.max(min, result);
+  }
+  if (max !== undefined) {
+    result = Math.min(max, result);
+  }
+  return result;
 }
 
-function onClearInput(onChange?: (str: string) => void) {
-    if (onChange) {
-        onChange("");
-    }
+/** Returns a parsed number or `undefined` if the string is not a complete value. */
+function parseByInputType(text: string, inputType: NumberInputType): number | undefined {
+  switch (inputType) {
+    case NumberInputType.Unsigned:
+      return toUnsigned(text);
+    case NumberInputType.Interger:
+      return toInteger(text);
+    case NumberInputType.Float:
+      return toFloat(text);
+    default:
+      return undefined;
+  }
 }
 
-function onBlurLocal(
-    value: string,
-    inputType: NumberInputType,
-    onChangeLocal: (str: string) => void,
-    onChange?: (num: number | undefined) => void,
-    requiredValue?: number
-) {
-    resetScrollOnBlur();
-    if (!onChange) {
-        return;
-    }
+/** Notifies parent: empty → `undefined`, otherwise best-effort parse while typing. */
+function syncParentValueFromText(
+  text: string,
+  inputType: NumberInputType,
+  onParentChange?: (num: number | undefined) => void
+): void {
+  if (!onParentChange) {
+    return;
+  }
+  if (text === "") {
+    onParentChange(undefined);
+    return;
+  }
+  onParentChange(parseByInputType(text, inputType));
+}
 
-    if (value === "") {
-        if (requiredValue !== undefined) {
-            onChange(requiredValue);
-            onChangeLocal(String(requiredValue));
-        } else {
-            onChange(undefined);
-        }
+/** Updates local text, validates by `inputType`, and syncs the parent `onChange`. */
+function onNumberInputChange(
+  event: ChangeEvent<HTMLInputElement>,
+  inputType: NumberInputType,
+  setLocalText: (text: string) => void,
+  onParentChange?: (num: number | undefined) => void
+): void {
+  event.preventDefault();
+  const inputElement = event.target;
+  const next = inputElement.value;
+
+  if (next === "" || next === undefined) {
+    setLocalText("");
+    syncParentValueFromText("", inputType, onParentChange);
+    return;
+  }
+  if (typeof next !== "string") {
+    return;
+  }
+  switch (inputType) {
+    case NumberInputType.Unsigned:
+      if (/^\d*$/.test(next)) {
+        setLocalText(next);
+        syncParentValueFromText(next, inputType, onParentChange);
+      }
+      break;
+    case NumberInputType.Interger:
+      if (/^-?\d*$/.test(next)) {
+        setLocalText(next);
+        syncParentValueFromText(next, inputType, onParentChange);
+      }
+      break;
+    case NumberInputType.Float:
+      if (/^-?\d*(\.\d*)?$/.test(next)) {
+        setLocalText(next);
+        syncParentValueFromText(next, inputType, onParentChange);
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+/** Finalizes value on blur: required fallback, parse repair, and min/max clamp. */
+function onNumberInputBlur(
+  args: Readonly<{
+    localText: string;
+    inputType: NumberInputType;
+    setLocalText: (text: string) => void;
+    onChange?: (num: number | undefined) => void;
+    requiredValue?: number;
+    min?: number;
+    max?: number;
+  }>
+): void {
+  const { localText, inputType, setLocalText, onChange, requiredValue, min, max } = args;
+  resetScrollOnBlur();
+  if (!onChange) {
+    return;
+  }
+
+  if (localText === "") {
+    if (requiredValue !== undefined) {
+      const fallback = clampToOptionalBounds(requiredValue, min, max);
+      onChange(fallback);
+      setLocalText(String(fallback));
     } else {
-        let numberValue: number | undefined;
-        switch (inputType) {
-            case NumberInputType.Unsigned:
-                numberValue = toUnsigned(value);
-                break;
-            case NumberInputType.Interger:
-                numberValue = toInteger(value);
-                break;
-            case NumberInputType.Float:
-                numberValue = toFloat(value);
-                break;
-            default:
-                break;
-        }
-        if (numberValue === undefined && requiredValue !== undefined) {
-            onChange(requiredValue);
-            onChangeLocal(String(requiredValue));
-        } else {
-            onChange(numberValue);
-        }
+      onChange(undefined);
     }
+    return;
+  }
+
+  const parsed = parseByInputType(localText, inputType);
+  if (parsed === undefined && requiredValue !== undefined) {
+    const fallback = clampToOptionalBounds(requiredValue, min, max);
+    onChange(fallback);
+    setLocalText(String(fallback));
+    return;
+  }
+  if (parsed !== undefined) {
+    const clamped = clampToOptionalBounds(parsed, min, max);
+    if (clamped !== parsed) {
+      setLocalText(String(clamped));
+    }
+    onChange(clamped);
+    return;
+  }
+  onChange(undefined);
 }
 
+/** Controlled numeric text field with optional min/max clamping on blur. */
 export function NumberInput({
-    value,
-    onChange,
-    isClearable,
-    className,
-    disabled,
-    placeholder,
-    requiredValue,
-    type = NumberInputType.Interger
-}: Readonly<TextInputProps>): JSX.Element {
-    const [localValue, setLocalValue] = React.useState("");
+  value,
+  onChange,
+  className,
+  disabled,
+  placeholder,
+  requiredValue,
+  type = NumberInputType.Interger,
+  min,
+  max,
+  inputMode = "numeric"
+}: NumberInputProps): ReactElement {
+  const [localValue, setLocalValue] = useState(() => (value === undefined || value === null ? "" : String(value)));
 
-    React.useEffect(() => {
-        setLocalValue(value?.toString() || "");
-    }, [value]);
+  const rootClassName = className ? `${className} ${styles.textInput}` : styles.textInput;
 
-    return (
-        <div className={`${className || ""} ${classes.textInput}`}>
-            <input
-                placeholder={placeholder}
-                onBlur={() => onBlurLocal(localValue, type, setLocalValue, onChange, requiredValue)}
-                value={localValue}
-                onChange={(localEvent: React.ChangeEvent<HTMLInputElement>) =>
-                    onInputChange(localEvent, type, setLocalValue)
-                }
-                className={`${classes.textInput__input} commonInput`}
-                disabled={disabled}
-                onFocus={(localEvent) => localEvent.currentTarget.select()}
-            />
-        </div>
-    );
+  return (
+    <div className={rootClassName}>
+      <input
+        type="text"
+        inputMode={inputMode}
+        placeholder={placeholder}
+        onBlur={() =>
+          onNumberInputBlur({
+            localText: localValue,
+            inputType: type,
+            setLocalText: setLocalValue,
+            onChange,
+            requiredValue,
+            min,
+            max
+          })
+        }
+        value={localValue}
+        onChange={(event) => onNumberInputChange(event, type, setLocalValue, onChange)}
+        className={styles.textInput__input}
+        disabled={disabled}
+        onFocus={(event) => event.currentTarget.select()}
+      />
+    </div>
+  );
 }

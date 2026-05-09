@@ -9,6 +9,8 @@ import type { DotsGameConfig, PlayerId } from "../model/types";
 import styles from "./DotsGame.module.css";
 import { DotsGameBackLink } from "./DotsGameBackLink";
 import { DotsGamePlay } from "./DotsGamePlay";
+import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
+import { NumberInputType } from "@/FSD/shared/ui/input/types";
 import { ToolbarButton } from "@/FSD/shared/ui/toolbar-button/ToolbarButton";
 
 const GRID_MIN = 3;
@@ -21,8 +23,8 @@ type Session = Readonly<{
 }>;
 
 type StartDotsGameSessionArgs = Readonly<{
-  rowsStr: string;
-  colsStr: string;
+  rows: number | undefined;
+  cols: number | undefined;
   name0: string;
   name1: string;
   cellSizePx: number;
@@ -31,12 +33,12 @@ type StartDotsGameSessionArgs = Readonly<{
   setSession: Dispatch<SetStateAction<Session | null>>;
 }>;
 
-/** */
+/** Validates grid setup and starts a session with the chosen config and labels. */
 function startDotsGameSession(args: StartDotsGameSessionArgs): void {
-  const { rowsStr, colsStr, name0, name1, cellSizePx, t, setSetupError, setSession } = args;
-  const rows = Number.parseInt(rowsStr, 10);
-  const cols = Number.parseInt(colsStr, 10);
+  const { rows, cols, name0, name1, cellSizePx, t, setSetupError, setSession } = args;
   if (
+    rows === undefined ||
+    cols === undefined ||
     !Number.isFinite(rows) ||
     !Number.isFinite(cols) ||
     !Number.isInteger(rows) ||
@@ -62,8 +64,8 @@ function startDotsGameSession(args: StartDotsGameSessionArgs): void {
 export function DotsGame(): ReactElement {
   const t = useTranslations("DotsGame");
   const defaults = useMemo(() => defaultDotsConfig(), []);
-  const [rowsStr, setRowsStr] = useState(String(defaults.rows));
-  const [colsStr, setColsStr] = useState(String(defaults.cols));
+  const [rows, setRows] = useState<number | undefined>(() => defaults.rows);
+  const [cols, setCols] = useState<number | undefined>(() => defaults.cols);
   const [name0, setName0] = useState("");
   const [name1, setName1] = useState("");
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -82,27 +84,11 @@ export function DotsGame(): ReactElement {
       <div className={styles.setupFields}>
         <label className={styles.setupLabel}>
           <span>{t("rowsLabel")}</span>
-          <input
-            className={styles.setupInput}
-            type="number"
-            inputMode="numeric"
-            min={GRID_MIN}
-            max={GRID_MAX}
-            value={rowsStr}
-            onChange={(e) => setRowsStr(e.target.value)}
-          />
+          <NumberInput type={NumberInputType.Unsigned} value={rows} min={GRID_MIN} max={GRID_MAX} onChange={setRows} />
         </label>
         <label className={styles.setupLabel}>
           <span>{t("colsLabel")}</span>
-          <input
-            className={styles.setupInput}
-            type="number"
-            inputMode="numeric"
-            min={GRID_MIN}
-            max={GRID_MAX}
-            value={colsStr}
-            onChange={(e) => setColsStr(e.target.value)}
-          />
+          <NumberInput type={NumberInputType.Unsigned} value={cols} min={GRID_MIN} max={GRID_MAX} onChange={setCols} />
         </label>
         <label className={styles.setupLabel}>
           <span>{t("playerName0")}</span>
@@ -132,8 +118,8 @@ export function DotsGame(): ReactElement {
         <ToolbarButton
           onClick={() =>
             startDotsGameSession({
-              rowsStr,
-              colsStr,
+              rows,
+              cols,
               name0,
               name1,
               cellSizePx: defaults.cellSizePx,

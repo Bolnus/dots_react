@@ -3,7 +3,7 @@
 import type { RefObject } from "react";
 import type { useTranslations } from "next-intl";
 
-import type { CellState, FilledPolygon, GridPoint, PlayerId } from "../model/types";
+import type { CellState, DotsGameMode, FilledPolygon, GridPoint, PlayerId } from "../model/types";
 import type { BoardDownArgs, BoardPointerHandlers, DotClassMap, MutablePoint } from "./DotsGameTypes";
 
 const TAP_MOVE_THRESHOLD_PX = 8;
@@ -288,7 +288,7 @@ export function buildPolygonData(polygons: readonly FilledPolygon[], cellSizePx:
 
 /** Produces the polyline points string for the currently traced chain (if any). */
 export function buildPreviewPoints(
-  mode: "play" | "drawPolygon" | "ended",
+  mode: DotsGameMode,
   chainPath: readonly GridPoint[],
   cellSizePx: number
 ): string | null {
@@ -296,6 +296,28 @@ export function buildPreviewPoints(
     return null;
   }
   return chainPath.map((p: GridPoint) => `${p.c * cellSizePx},${p.r * cellSizePx}`).join(" ");
+}
+
+/**
+ * Stroke color for the chain preview polyline.
+ * Uses the chain start dot owner to match the current drawing player's color.
+ */
+export function previewStrokeForChain(
+  mode: DotsGameMode,
+  chainStart: GridPoint | null,
+  cells: readonly CellState[][]
+): string {
+  if (mode !== "drawPolygon" || !chainStart) {
+    return "var(--dots-preview)";
+  }
+  const startOwner = cells[chainStart.r]?.[chainStart.c]?.owner ?? null;
+  if (startOwner === "player0") {
+    return "var(--dots-p0)";
+  }
+  if (startOwner === "player1") {
+    return "var(--dots-p1)";
+  }
+  return "var(--dots-preview)";
 }
 
 type DotData = Readonly<{

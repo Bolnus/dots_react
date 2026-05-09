@@ -94,6 +94,19 @@
   box-sizing: border-box;
 }
 
+@keyframes pendingDotPulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
+.dotPending {
+  animation: pendingDotPulse 0.9s ease-in-out infinite alternate;
+}
+
 .dotP0 {
   background: var(--dots-p0);
   border: 1px solid color-mix(in srgb, var(--dots-p0) 55%, #000);

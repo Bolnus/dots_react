@@ -20,7 +20,8 @@ import {
   handleEscapeKey,
   onBoardTouchEndPreventDefault,
   onBoardTouchMove,
-  onBoardTouchStartPreventDefault
+  onBoardTouchStartPreventDefault,
+  previewStrokeForChain
 } from "./DotsGameUtils";
 import type { DotClassMap, MutablePoint } from "./DotsGameTypes";
 
@@ -104,6 +105,8 @@ export function DotsGame(): ReactElement {
   const dotData = useMemo(() => buildDotData(cells, cellSizePx), [cells, cellSizePx]);
 
   const dotClassMap: DotClassMap = { p0: styles.dotP0, p1: styles.dotP1, blockedEmpty: styles.dotBlockedEmpty };
+  const pendingDotKey = pendingDot ? `d-${pendingDot.r}-${pendingDot.c}` : null;
+  const previewStroke = previewStrokeForChain(mode, state.chainStart, state.cells);
 
   return (
     <div className={styles.wrap}>
@@ -169,7 +172,7 @@ export function DotsGame(): ReactElement {
             {previewPoints ? (
               <polyline
                 fill="none"
-                stroke="var(--dots-preview)"
+                stroke={previewStroke}
                 strokeWidth={2}
                 strokeDasharray="6 4"
                 points={previewPoints}
@@ -180,7 +183,9 @@ export function DotsGame(): ReactElement {
             {dotData.map((d) => (
               <div
                 key={d.key}
-                className={`${styles.dot} ${dotClassFor(d.owner, d.blocked, dotClassMap)}`}
+                className={`${styles.dot} ${dotClassFor(d.owner, d.blocked, dotClassMap)}${
+                  pendingDotKey && d.key === pendingDotKey ? ` ${styles.dotPending}` : ""
+                }`}
                 style={{ left: d.left, top: d.top }}
               />
             ))}

@@ -97,7 +97,7 @@ function isGridPointOnClosedSegment(p: GridPoint, a: GridPoint, b: GridPoint): b
   );
 }
 
-/** */
+/** True if `p` lies on an edge of the polygon `ring`. */
 function isOnPolygonBoundary(p: GridPoint, ring: readonly GridPoint[]): boolean {
   const n = ring.length;
   for (let i = 0; i < n; i++) {

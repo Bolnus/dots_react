@@ -14,12 +14,14 @@ export type ExpandableEllipsisTextProps = Readonly<{
   toggleAriaLabel: string;
 }>;
 
+/** Invokes `onOutside` when the event target is outside `root`. */
 function handlePointer(root: HTMLElement, onOutside: () => void, event: MouseEvent | TouchEvent): void {
   if (!(event.target instanceof Node) || !root.contains(event.target)) {
     onOutside();
   }
-};
+}
 
+/** Invokes `onEscape` when Escape is pressed. */
 function handleKey(onEscape: () => void, event: KeyboardEvent) {
   if (event.key === "Escape") {
     onEscape();
@@ -47,7 +49,8 @@ export function ExpandableEllipsisText({
     if (!root) {
       return undefined;
     }
-    const handlePointerLocal = (event: MouseEvent | TouchEvent): void => handlePointer(root, () => setIsOpen(false), event);
+    const handlePointerLocal = (event: MouseEvent | TouchEvent): void =>
+      handlePointer(root, () => setIsOpen(false), event);
     const handleKeyLocal = (event: KeyboardEvent): void => handleKey(() => setIsOpen(false), event);
     document.addEventListener("mousedown", handlePointerLocal);
     document.addEventListener("touchstart", handlePointerLocal, { capture: true });

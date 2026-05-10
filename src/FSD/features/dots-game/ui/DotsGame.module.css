@@ -1,3 +1,15 @@
+.playPortalRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  padding: 16px;
+  background: var(--bg-base);
+}
+
 .setup {
   --dots-p1: #ef4444;
   margin-top: 4px;

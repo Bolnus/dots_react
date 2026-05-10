@@ -48,7 +48,7 @@ const nextConfig: NextConfig = {
     qualities: [50, 100],
     dangerouslyAllowLocalIP: true
   },
-  allowedDevOrigins: [DEV_HOST_MIKE_PC],
+  allowedDevOrigins: [DEV_HOST_MIKE_PC, "mike-laptop.local"],
   staticPageGenerationTimeout: 120
 };
 

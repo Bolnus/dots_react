@@ -5,9 +5,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { routing } from "@/FSD/shared/lib/i18n/routing";
-import "@/FSD/app/styles/globals.css";
 import { AppHeader } from "@/FSD/widgets/app-header/ui/AppHeader";
-import Script from "next/script";
 
 type LocaleLayoutProps = Readonly<{
   children: ReactNode;
@@ -45,16 +43,9 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <head>
-        <Script id="theme-init" src="/theme-init.js" strategy="beforeInteractive" />
-      </head>
-      <body>
-        <NextIntlClientProvider messages={messages}>
-          <AppHeader />
-          {children}
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider messages={messages}>
+      <AppHeader />
+      {children}
+    </NextIntlClientProvider>
   );
 }

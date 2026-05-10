@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type Dispatch, type ReactElement, type SetStateAction } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 
 import { defaultDotsConfig } from "../model/logic";
@@ -72,7 +73,7 @@ export function DotsGame(): ReactElement {
   const [session, setSession] = useState<Session | null>(null);
 
   if (session) {
-    return (
+    const play = (
       <DotsGamePlay
         key={session.key}
         config={session.config}
@@ -80,6 +81,10 @@ export function DotsGame(): ReactElement {
         onExit={() => setSession(null)}
       />
     );
+    if (typeof document === "undefined") {
+      return play;
+    }
+    return createPortal(<div className={styles.playPortalRoot}>{play}</div>, document.body);
   }
 
   return (

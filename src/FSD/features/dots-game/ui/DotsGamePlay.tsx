@@ -255,20 +255,6 @@ export function DotsGamePlay({ config, playerLabels, onExit, preview = false }: 
 
   const wrapClassName = preview ? `${styles.wrap} ${styles.previewWrap}` : styles.wrap;
   const boardClassName = preview ? `${styles.board} ${styles.boardPreview}` : styles.board;
-  const mouseDownHandler =
-    preview === true
-      ? undefined
-      : (e: ReactMouseEvent<HTMLDivElement>) =>
-          handleBoardMouseDown(e, boardRef, {
-            mode: state.mode,
-            cellSizePx,
-            rows,
-            cols,
-            placeLmb,
-            placeRmb,
-            polygonClick
-          });
-  const contextMenuHandler = preview === true ? undefined : (e: ReactMouseEvent<HTMLDivElement>) => e.preventDefault();
 
   return (
     <div className={wrapClassName}>
@@ -291,8 +277,19 @@ export function DotsGamePlay({ config, playerLabels, onExit, preview = false }: 
           ref={boardRef}
           className={boardClassName}
           style={{ width, height }}
-          onMouseDown={mouseDownHandler}
-          onContextMenu={contextMenuHandler}
+          onMouseDown={preview === true
+            ? undefined
+            : (e: ReactMouseEvent<HTMLDivElement>) =>
+                handleBoardMouseDown(e, boardRef, {
+                  mode: state.mode,
+                  cellSizePx,
+                  rows,
+                  cols,
+                  placeLmb,
+                  placeRmb,
+                  polygonClick
+                })}
+          onContextMenu={preview === true ? undefined : (e: ReactMouseEvent<HTMLDivElement>) => e.preventDefault()}
         >
           <DotsGamePlayBoardLayers
             width={width}

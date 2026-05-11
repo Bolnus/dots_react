@@ -2,6 +2,7 @@ import {
   applyCapture,
   areNeighbourCells,
   computeCapture,
+  computeScoresFromGridAndPolygons,
   createEmptyGrid,
   defaultDotsConfig,
   ringFromChainPath
@@ -117,7 +118,7 @@ function popUndoEntry(state: DotsGameState): DotsGameState {
     const cell = cells[p.r][p.c];
     cells[p.r][p.c] = { owner: cell.owner, blocked: false };
   }
-  const { capturer, scoredCount, enclosureStarter } = last;
+  const { enclosureStarter } = last;
   cells[enclosureStarter.r][enclosureStarter.c] = { owner: null, blocked: false };
 
   let undoStack = stack;
@@ -132,10 +133,7 @@ function popUndoEntry(state: DotsGameState): DotsGameState {
     cells,
     undoStack,
     polygons,
-    scores: {
-      ...state.scores,
-      [capturer]: state.scores[capturer] - scoredCount
-    },
+    scores: computeScoresFromGridAndPolygons(cells, polygons),
     dotsPlacedCount: Math.max(0, state.dotsPlacedCount - 1)
   };
 }
@@ -168,19 +166,15 @@ function tryClosePolygon(state: DotsGameState): DotsGameState {
   if (!capture) {
     return cancelPolygonDrawing(state);
   }
-  const scored = capture.scoredDots.length;
-  const scores: DotsGameState["scores"] = {
-    ...state.scores,
-    [capturer]: state.scores[capturer] + scored
-  };
   const newPolygon: FilledPolygon = { owner: capturer, ring: capture.ring };
   const committed = commitPendingDot(state);
   const cellsAfter = applyCapture(committed.cells, capture);
+  const newPolygons = [...state.polygons, newPolygon];
+  const scores = computeScoresFromGridAndPolygons(cellsAfter, newPolygons);
   const starter = committed.chainStart!;
   const captureUndo: UndoEntry = {
     type: "capture",
     capturer,
-    scoredCount: scored,
     blockedCells: capture.blockedCells.map((p) => ({ r: p.r, c: p.c })),
     enclosureStarter: { r: starter.r, c: starter.c }
   };
@@ -191,7 +185,7 @@ function tryClosePolygon(state: DotsGameState): DotsGameState {
     mode: "play",
     chainStart: null,
     chainPath: [],
-    polygons: [...state.polygons, newPolygon],
+    polygons: newPolygons,
     undoStack: [...committed.undoStack, captureUndo]
   };
 }

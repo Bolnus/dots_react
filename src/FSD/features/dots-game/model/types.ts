@@ -25,7 +25,6 @@ export type UndoEntry =
   | Readonly<{
       type: "capture";
       capturer: PlayerId;
-      scoredCount: number;
       blockedCells: GridPoint[];
       /** RMB dot that began this enclosure; removed together with the capture on undo. */
       enclosureStarter: GridPoint;

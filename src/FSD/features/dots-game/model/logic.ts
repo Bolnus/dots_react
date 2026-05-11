@@ -1,4 +1,4 @@
-import type { CellState, DotsGameConfig, GridPoint, PlayerId } from "./types";
+import type { CellState, DotsGameConfig, FilledPolygon, GridPoint, PlayerId } from "./types";
 
 /** King-neighbour (8-connected), matching Qt distance < sqrt(2)*scale + 1 on a square grid. */
 export function areNeighbourCells(a: GridPoint, b: GridPoint): boolean {
@@ -166,6 +166,92 @@ export type CaptureResult = Readonly<{
   /** Cells that become blocked (captured area; excludes ring vertices). */
   blockedCells: GridPoint[];
 }>;
+
+/**
+ * Twice the absolute polygon area in the same y-up Cartesian space as `pointInPolygon`
+ * (vertex at (c+0.5, -(r+0.5))). Used only to compare nesting (larger ≈ outer ring).
+ */
+function polygonDoubledAbsArea(ring: readonly GridPoint[]): number {
+  const n = ring.length;
+  if (n < 3) {
+    return Number.POSITIVE_INFINITY;
+  }
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const xi = ring[i].c + 0.5;
+    const yi = -(ring[i].r + 0.5);
+    const xj = ring[j].c + 0.5;
+    const yj = -(ring[j].r + 0.5);
+    sum += xi * yj - xj * yi;
+  }
+  return Math.abs(sum);
+}
+
+/** Index of the largest-area polygon whose strict interior contains `key`, or -1. */
+function indexOfOutermostPolygonContaining(
+  key: string,
+  interiorByPoly: readonly Set<string>[],
+  doubledArea: readonly number[]
+): number {
+  let bestIdx = -1;
+  let bestArea = -1;
+  for (let i = 0; i < interiorByPoly.length; i++) {
+    if (!interiorByPoly[i].has(key)) {
+      continue;
+    }
+    const a = doubledArea[i];
+    if (a > bestArea || (a === bestArea && (bestIdx === -1 || i < bestIdx))) {
+      bestArea = a;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
+/**
+ * Authoritative scores from the grid and all completed capture rings.
+ * Each occupied cell is attributed to the outermost strictly containing polygon (maximum area),
+ * so a larger capture supersedes scoring from nested polygons inside it. The polygon owner
+ * scores +1 when the cell owner is the opponent.
+ */
+export function computeScoresFromGridAndPolygons(
+  cells: CellState[][],
+  polygons: readonly FilledPolygon[]
+): Record<PlayerId, number> {
+  const scores: Record<PlayerId, number> = { player0: 0, player1: 0 };
+  const dotRows = cells.length;
+  const dotCols = cells[0]?.length ?? 0;
+  if (dotRows < 1 || dotCols < 1 || polygons.length === 0) {
+    return scores;
+  }
+
+  const interiorByPoly: Set<string>[] = [];
+  const doubledArea: number[] = [];
+  for (const poly of polygons) {
+    interiorByPoly.push(computeInteriorDotKeys(poly.ring, dotRows, dotCols));
+    doubledArea.push(polygonDoubledAbsArea(poly.ring));
+  }
+
+  for (let r = 0; r < dotRows; r++) {
+    for (let c = 0; c < dotCols; c++) {
+      const cell = cells[r][c];
+      if (cell.owner === null) {
+        continue;
+      }
+      const bestIdx = indexOfOutermostPolygonContaining(dotKey(r, c), interiorByPoly, doubledArea);
+      if (bestIdx === -1) {
+        continue;
+      }
+      const polyOwner = polygons[bestIdx].owner;
+      if (cell.owner !== polyOwner) {
+        scores[polyOwner]++;
+      }
+    }
+  }
+
+  return scores;
+}
 
 /** Finds opponent dots inside the ring and returns the capture (or null if no score). */
 export function computeCapture(

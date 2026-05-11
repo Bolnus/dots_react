@@ -1,11 +1,11 @@
 "use client";
 
-import type { ReactElement } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactElement } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 
 import { useDotsGame } from "../model/useDotsGame";
-import type { DotsGameConfig, PlayerId } from "../model/types";
+import type { DotsGameConfig, DotsGameMode, GridPoint, PlayerId } from "../model/types";
 
 import styles from "./DotsGamePlay.module.css";
 import { ExpandableEllipsisText } from "@/FSD/shared/ui/expandable-ellipsis-text/ExpandableEllipsisText";
@@ -30,11 +30,143 @@ import type { DotClassMap, MutablePoint } from "./DotsGameTypes";
 type DotsGamePlayProps = Readonly<{
   config: DotsGameConfig;
   playerLabels: Readonly<Record<PlayerId, string>>;
-  onExit: () => void;
+  /** When set, exit is shown in the toolbar (ignored in `preview` mode). */
+  onExit?: () => void;
+  /** Empty board only: no toolbar, no input, for setup preview. */
+  preview?: boolean;
 }>;
 
-/** In-game board, scoring, and actions (stage 2). */
-export function DotsGamePlay({ config, playerLabels, onExit }: DotsGamePlayProps): ReactElement {
+type DotsGameT = (key: string, values?: Record<string, number>) => string;
+
+type BoardLine = Readonly<{ key: string; x1: number; y1: number; x2: number; y2: number }>;
+type BoardPoly = Readonly<{ key: string; points: string; fill: string }>;
+
+type DotsGamePlayBoardLayersProps = Readonly<{
+  width: number;
+  height: number;
+  t: DotsGameT;
+  gridLinesData: readonly BoardLine[];
+  polygonData: readonly BoardPoly[];
+  previewPoints: string | null;
+  previewStroke: string;
+  dotData: ReturnType<typeof buildDotData>;
+  dotClassMap: DotClassMap;
+  pendingDotKey: string | null;
+}>;
+
+/** Renders the board SVG (grid, fills, chain preview) and the absolutely positioned dots layer. */
+function DotsGamePlayBoardLayers({
+  width,
+  height,
+  t,
+  gridLinesData,
+  polygonData,
+  previewPoints,
+  previewStroke,
+  dotData,
+  dotClassMap,
+  pendingDotKey
+}: DotsGamePlayBoardLayersProps): ReactElement {
+  return (
+    <>
+      <svg className={styles.gridSvg} width={width} height={height} role="img" aria-label={t("boardAria")}>
+        <title>{t("boardAria")}</title>
+        {gridLinesData.map((l) => (
+          <line
+            key={l.key}
+            x1={l.x1}
+            y1={l.y1}
+            x2={l.x2}
+            y2={l.y2}
+            stroke="var(--dots-grid)"
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        {polygonData.map((p) => (
+          <polygon key={p.key} points={p.points} fill={p.fill} fillOpacity={0.22} stroke={p.fill} strokeWidth={2} />
+        ))}
+        {previewPoints ? (
+          <polyline fill="none" stroke={previewStroke} strokeWidth={2} strokeDasharray="6 4" points={previewPoints} />
+        ) : null}
+      </svg>
+      <div className={styles.dotsLayer}>
+        {dotData.map((d) => (
+          <div
+            key={d.key}
+            className={`${styles.dot} ${dotClassFor(d.owner, d.blocked, dotClassMap)}${
+              pendingDotKey && d.key === pendingDotKey ? ` ${styles.dotPending}` : ""
+            }`}
+            style={{ left: d.left, top: d.top }}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+type DotsGamePlayChromeProps = Readonly<{
+  t: DotsGameT;
+  playerLabels: Readonly<Record<PlayerId, string>>;
+  scores: Readonly<Record<PlayerId, number>>;
+  turnLabel: string;
+  mode: DotsGameMode;
+  pendingDot: GridPoint | null;
+  onAccept: () => void;
+  onUndo: () => void;
+  onExit?: () => void;
+  onSurrender: () => void;
+}>;
+
+/** Scores, turn line, and action buttons (not shown in setup preview). */
+function DotsGamePlayChrome({
+  t,
+  playerLabels,
+  scores,
+  turnLabel,
+  mode,
+  pendingDot,
+  onAccept,
+  onUndo,
+  onExit,
+  onSurrender
+}: DotsGamePlayChromeProps): ReactElement {
+  return (
+    <>
+      <div className={styles.toolbar}>
+        <div className={styles.scores}>
+          <span className={styles.scoreP0}>
+            {playerLabels.player0}: {scores.player0}
+          </span>
+          <span className={styles.scoreP1}>
+            {playerLabels.player1}: {scores.player1}
+          </span>
+        </div>
+        <div className={styles.turnSlot}>
+          <ExpandableEllipsisText
+            className={styles.turnLine}
+            prefix={t("statusLabel")}
+            text={turnLabel}
+            toggleAriaLabel={t("turnLineToggleAria")}
+          />
+        </div>
+      </div>
+      <div className={styles.actions}>
+        <ToolbarButton onClick={onAccept} disabled={mode !== "play" || pendingDot === null}>
+          {t("accept")}
+        </ToolbarButton>
+        <ToolbarButton onClick={onUndo}>{t("undo")}</ToolbarButton>
+        {onExit ? <ToolbarButton onClick={onExit}>{t("exit")}</ToolbarButton> : null}
+        <ToolbarButton onClick={onSurrender} disabled={mode === "ended"}>
+          {t("surrender")}
+        </ToolbarButton>
+      </div>
+    </>
+  );
+}
+
+/** In-game board, scoring, and actions (stage 2). Optional `preview` renders a static empty grid. */
+export function DotsGamePlay({ config, playerLabels, onExit, preview = false }: DotsGamePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
   const boardRef = useRef<HTMLDivElement | null>(null);
   const boardWrapRef = useRef<HTMLDivElement | null>(null);
@@ -45,14 +177,20 @@ export function DotsGamePlay({ config, playerLabels, onExit }: DotsGamePlayProps
   const height = (rows - 1) * cellSizePx;
 
   useEffect(() => {
+    if (preview) {
+      return undefined;
+    }
     const onKey = (e: KeyboardEvent): void => handleEscapeKey(e, undo);
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  }, [undo]);
+  }, [preview, undo]);
 
   useEffect(() => {
+    if (preview) {
+      return undefined;
+    }
     const boardEl = boardRef.current;
     const wrapEl = boardWrapRef.current;
     if (!boardEl || !wrapEl) {
@@ -94,11 +232,11 @@ export function DotsGamePlay({ config, playerLabels, onExit }: DotsGamePlayProps
       boardEl.removeEventListener("touchend", onTouchEnd);
       boardEl.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [cellSizePx, cols, placeLmb, placeRmb, polygonClick, rows, state.mode]);
+  }, [cellSizePx, cols, placeLmb, placeRmb, polygonClick, preview, rows, state.mode]);
 
   const currentPlayerName = playerLabels[currentPlayer];
   const turnLabel = formatTurnLabel(t, mode, currentPlayerName);
-  const winnerText = formatWinnerText(t, winner, surrenderedBy, playerLabels);
+  const winnerText = preview ? null : formatWinnerText(t, winner, surrenderedBy, playerLabels);
 
   const gridLinesData = useMemo(
     () => buildGridLinesData({ rows, cols, cellSizePx, width, height }),
@@ -115,92 +253,59 @@ export function DotsGamePlay({ config, playerLabels, onExit }: DotsGamePlayProps
   const pendingDotKey = pendingDot ? `d-${pendingDot.r}-${pendingDot.c}` : null;
   const previewStroke = previewStrokeForChain(mode, state.chainStart, state.cells);
 
+  const wrapClassName = preview ? `${styles.wrap} ${styles.previewWrap}` : styles.wrap;
+  const boardClassName = preview ? `${styles.board} ${styles.boardPreview}` : styles.board;
+  const mouseDownHandler =
+    preview === true
+      ? undefined
+      : (e: ReactMouseEvent<HTMLDivElement>) =>
+          handleBoardMouseDown(e, boardRef, {
+            mode: state.mode,
+            cellSizePx,
+            rows,
+            cols,
+            placeLmb,
+            placeRmb,
+            polygonClick
+          });
+  const contextMenuHandler = preview === true ? undefined : (e: ReactMouseEvent<HTMLDivElement>) => e.preventDefault();
+
   return (
-    <div className={styles.wrap}>
-      <div className={styles.toolbar}>
-        <div className={styles.scores}>
-          <span className={styles.scoreP0}>
-            {playerLabels.player0}: {scores.player0}
-          </span>
-          <span className={styles.scoreP1}>
-            {playerLabels.player1}: {scores.player1}
-          </span>
-        </div>
-        <div className={styles.turnSlot}>
-          <ExpandableEllipsisText
-            className={styles.turnLine}
-            prefix={t("statusLabel")}
-            text={turnLabel}
-            toggleAriaLabel={t("turnLineToggleAria")}
-          />
-        </div>
-      </div>
-      <div className={styles.actions}>
-        <ToolbarButton onClick={accept} disabled={state.mode !== "play" || pendingDot === null}>
-          {t("accept")}
-        </ToolbarButton>
-        <ToolbarButton onClick={undo}>{t("undo")}</ToolbarButton>
-        <ToolbarButton onClick={onExit}>{t("exit")}</ToolbarButton>
-        <ToolbarButton onClick={surrender} disabled={state.mode === "ended"}>
-          {t("surrender")}
-        </ToolbarButton>
-      </div>
+    <div className={wrapClassName}>
+      {preview ? null : (
+        <DotsGamePlayChrome
+          t={t}
+          playerLabels={playerLabels}
+          scores={scores}
+          turnLabel={turnLabel}
+          mode={state.mode}
+          pendingDot={pendingDot}
+          onAccept={accept}
+          onUndo={undo}
+          onExit={onExit}
+          onSurrender={surrender}
+        />
+      )}
       <div ref={boardWrapRef} className={styles.boardWrap}>
         <div
           ref={boardRef}
-          className={styles.board}
+          className={boardClassName}
           style={{ width, height }}
-          onMouseDown={(e) =>
-            handleBoardMouseDown(e, boardRef, {
-              mode: state.mode,
-              cellSizePx,
-              rows,
-              cols,
-              placeLmb,
-              placeRmb,
-              polygonClick
-            })
-          }
-          onContextMenu={(e) => e.preventDefault()}
+          onMouseDown={mouseDownHandler}
+          onContextMenu={contextMenuHandler}
         >
-          <svg className={styles.gridSvg} width={width} height={height} role="img" aria-label={t("boardAria")}>
-            <title>{t("boardAria")}</title>
-            {gridLinesData.map((l) => (
-              <line
-                key={l.key}
-                x1={l.x1}
-                y1={l.y1}
-                x2={l.x2}
-                y2={l.y2}
-                stroke="var(--dots-grid)"
-                strokeWidth={1}
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-            {polygonData.map((p) => (
-              <polygon key={p.key} points={p.points} fill={p.fill} fillOpacity={0.22} stroke={p.fill} strokeWidth={2} />
-            ))}
-            {previewPoints ? (
-              <polyline
-                fill="none"
-                stroke={previewStroke}
-                strokeWidth={2}
-                strokeDasharray="6 4"
-                points={previewPoints}
-              />
-            ) : null}
-          </svg>
-          <div className={styles.dotsLayer}>
-            {dotData.map((d) => (
-              <div
-                key={d.key}
-                className={`${styles.dot} ${dotClassFor(d.owner, d.blocked, dotClassMap)}${
-                  pendingDotKey && d.key === pendingDotKey ? ` ${styles.dotPending}` : ""
-                }`}
-                style={{ left: d.left, top: d.top }}
-              />
-            ))}
-          </div>
+          <DotsGamePlayBoardLayers
+            width={width}
+            height={height}
+            t={t}
+            gridLinesData={gridLinesData}
+            polygonData={polygonData}
+            previewPoints={previewPoints}
+            previewStroke={previewStroke}
+            dotData={dotData}
+            dotClassMap={dotClassMap}
+            pendingDotKey={pendingDotKey}
+          />
         </div>
       </div>
       {winnerText ? <div className={styles.overlay}>{winnerText}</div> : null}

@@ -61,6 +61,13 @@ function startDotsGameSession(args: StartDotsGameSessionArgs): void {
   setSession({ key: Date.now(), config, labels });
 }
 
+/** True when `value` is an integer grid size in [GRID_MIN, GRID_MAX]. */
+function isValidGridDimension(value: number | undefined): value is number {
+  return (
+    value !== undefined && Number.isFinite(value) && Number.isInteger(value) && value >= GRID_MIN && value <= GRID_MAX
+  );
+}
+
 /** Dots (polygon capture): setup (stage 1) then board (stage 2). */
 export function DotsGame(): ReactElement {
   const t = useTranslations("DotsGame");
@@ -71,6 +78,22 @@ export function DotsGame(): ReactElement {
   const [name1, setName1] = useState("");
   const [setupError, setSetupError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+
+  const previewConfig = useMemo((): DotsGameConfig => {
+    return {
+      rows: isValidGridDimension(rows) ? rows : defaults.rows,
+      cols: isValidGridDimension(cols) ? cols : defaults.cols,
+      cellSizePx: defaults.cellSizePx
+    };
+  }, [rows, cols, defaults]);
+
+  const previewLabels = useMemo(
+    (): Readonly<Record<PlayerId, string>> => ({
+      player0: name0.trim() || t("player0"),
+      player1: name1.trim() || t("player1")
+    }),
+    [name0, name1, t]
+  );
 
   if (session) {
     const play = (
@@ -143,6 +166,14 @@ export function DotsGame(): ReactElement {
         >
           {t("startGame")}
         </DotsGameStartButton>
+      </div>
+      <div className={styles.setupPreview}>
+        <DotsGamePlay
+          key={`preview-${previewConfig.rows}x${previewConfig.cols}`}
+          config={previewConfig}
+          playerLabels={previewLabels}
+          preview
+        />
       </div>
     </div>
   );

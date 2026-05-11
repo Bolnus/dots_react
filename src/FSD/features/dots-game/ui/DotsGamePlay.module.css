@@ -1,3 +1,15 @@
+.previewWrap {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  max-height: none;
+}
+
+.boardPreview {
+  pointer-events: none;
+  cursor: default;
+}
+
 .wrap {
   --dots-p0: #3b82f6;
   --dots-p1: #ef4444;

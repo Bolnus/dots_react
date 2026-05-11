@@ -277,18 +277,20 @@ export function DotsGamePlay({ config, playerLabels, onExit, preview = false }: 
           ref={boardRef}
           className={boardClassName}
           style={{ width, height }}
-          onMouseDown={preview === true
-            ? undefined
-            : (e: ReactMouseEvent<HTMLDivElement>) =>
-                handleBoardMouseDown(e, boardRef, {
-                  mode: state.mode,
-                  cellSizePx,
-                  rows,
-                  cols,
-                  placeLmb,
-                  placeRmb,
-                  polygonClick
-                })}
+          onMouseDown={
+            preview === true
+              ? undefined
+              : (e: ReactMouseEvent<HTMLDivElement>) =>
+                  handleBoardMouseDown(e, boardRef, {
+                    mode: state.mode,
+                    cellSizePx,
+                    rows,
+                    cols,
+                    placeLmb,
+                    placeRmb,
+                    polygonClick
+                  })
+          }
           onContextMenu={preview === true ? undefined : (e: ReactMouseEvent<HTMLDivElement>) => e.preventDefault()}
         >
           <DotsGamePlayBoardLayers

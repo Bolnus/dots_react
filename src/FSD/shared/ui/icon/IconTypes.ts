@@ -1,6 +1,6 @@
 export type UiSize = "sm" | "md" | "lg";
 
-export type IconName = "hamburger";
+export type IconName = "fetching" | "hamburger";
 
 export type IconProps = Readonly<{
   color?: string;

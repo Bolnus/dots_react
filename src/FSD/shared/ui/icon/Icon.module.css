@@ -22,3 +22,39 @@
   width: 22px;
   height: 14px;
 }
+
+.fetching {
+  display: block;
+  flex-shrink: 0;
+  margin: 0 auto;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  animation: iconFetchingSpin 0.65s linear infinite;
+}
+
+.fetchingSm {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+.fetchingMd {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+.fetchingLg {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
+}
+
+@keyframes iconFetchingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

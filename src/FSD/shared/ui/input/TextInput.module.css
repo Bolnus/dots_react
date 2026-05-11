@@ -1,0 +1,75 @@
+.textInput
+{
+    min-height: 38px;
+    height: 38px;
+    /* background-color: var(--inputBgColor); */
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.textInput__input
+{
+    padding: 2px 8px;
+    box-sizing: border-box;
+    background: inherit;
+    /* color: var(--fontColorFirm); */
+    /* font-size: var(--fontSizeSmall); */
+    flex: 1 1 0;
+    min-width: 10px;
+    width: 0;
+}
+
+.textInput__input::placeholder
+{
+    color: hsl(0, 0%, 50%);
+}
+
+.textInput__indicatorContainer
+{
+    -webkit-align-items: center;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-align-self: stretch;
+    -ms-flex-item-align: stretch;
+    align-self: stretch;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-shrink: 0;
+    -ms-flex-negative: 0;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.textInput__spacer
+{
+    -webkit-align-self: stretch;
+    -ms-flex-item-align: stretch;
+    align-self: stretch;
+    width: 1px;
+    /* background: var(--fontColorFirm); */
+    margin-bottom: 8px;
+    margin-top: 8px;
+    box-sizing: border-box;
+}
+
+.textInput__indicator
+{
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    justify-content: center;
+    -webkit-transition: color 150ms;
+    transition: color 150ms;
+    box-sizing: border-box;
+    width: 36px;
+}
+
+.textInput__indicator:hover
+{
+    cursor: pointer;
+}

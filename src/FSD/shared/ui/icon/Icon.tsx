@@ -1,7 +1,8 @@
 import type { CSSProperties, ReactElement } from "react";
 
-import type { IconProps, UiSize } from "./IconTypes";
+import type { IconProps } from "./IconTypes";
 import styles from "./Icon.module.css";
+import { UiSize } from "../../lib/common/types";
 
 /** Resolves the fetching ring size class; defaults to medium. */
 function getFetchingSizeClassName(size: UiSize | undefined): string {

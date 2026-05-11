@@ -3,9 +3,10 @@
 import type { ButtonHTMLAttributes, MouseEvent as ReactMouseEvent, ReactElement } from "react";
 
 import { Icon } from "@/FSD/shared/ui/icon/Icon";
-import type { IconName, UiSize } from "@/FSD/shared/ui/icon/IconTypes";
+import type { IconName } from "@/FSD/shared/ui/icon/IconTypes";
 
 import styles from "./ButtonIcon.module.css";
+import { UiSize } from "../../lib/common/types";
 
 /** Visual fill and border treatment for the icon button surface. */
 export type ButtonIconBackground = "default" | "ghost" | "solid";

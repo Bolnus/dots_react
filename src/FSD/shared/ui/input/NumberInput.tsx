@@ -4,6 +4,7 @@ import { useState, type ChangeEvent, type HTMLAttributes, type ReactElement } fr
 
 import styles from "./NumberInput.module.css";
 import { NumberInputType } from "./types";
+import { resetScrollOnBlur } from "../../lib/common/hadlers";
 
 export type NumberInputProps = Readonly<{
   value?: number;
@@ -19,11 +20,6 @@ export type NumberInputProps = Readonly<{
   max?: number;
   inputMode?: HTMLAttributes<HTMLInputElement>["inputMode"];
 }>;
-
-/** Workaround for mobile browsers shifting scroll on numeric input blur. */
-export function resetScrollOnBlur(): void {
-  window.scrollTo(0, 0);
-}
 
 /** Parses a complete numeric string for the given input kind. */
 function toNumberByType(text: string, inputType: NumberInputType): number | undefined {
@@ -50,17 +46,17 @@ function toNumberByType(text: string, inputType: NumberInputType): number | unde
 }
 
 /** Parses a non-negative integer string. */
-export function toUnsigned(text: string): number | undefined {
+function toUnsigned(text: string): number | undefined {
   return toNumberByType(text, NumberInputType.Unsigned);
 }
 
 /** Parses a signed integer string. */
-export function toInteger(text: string): number | undefined {
+function toInteger(text: string): number | undefined {
   return toNumberByType(text, NumberInputType.Interger);
 }
 
 /** Parses a signed decimal string. */
-export function toFloat(text: string): number | undefined {
+function toFloat(text: string): number | undefined {
   return toNumberByType(text, NumberInputType.Float);
 }
 

@@ -5,7 +5,12 @@
   --dots-board-bg: var(--bg-card);
   --dots-preview: var(--accent);
   --dots-blocked-empty: color-mix(in srgb, var(--text-muted) 35%, transparent);
-  margin-top: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 10px 10px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
 }
 
 .toolbar {
@@ -39,6 +44,7 @@
 
 .actions {
   display: flex;
+  flex: 1 0 auto;
   gap: 8px;
   margin-bottom: 20px;
   overflow-y: auto;

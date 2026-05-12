@@ -1,0 +1,19 @@
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-secondary);
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.backLink:hover {
+  opacity: 0.85;
+}
+
+.arrow {
+  font-size: 1.1em;
+  line-height: 1;
+}

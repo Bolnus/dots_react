@@ -157,6 +157,104 @@ function HideIcon({ color, title, size }: SvgIconProps): ReactElement {
   );
 }
 
+/** Closed padlock used to mark password-protected resources. */
+function LockIcon({ color, title, size }: SvgIconProps): ReactElement {
+  const px = getSvgBoxPixels(size);
+  const style: CSSProperties | undefined = color ? { color } : undefined;
+  const svg = (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={styles.svgGlyph}
+      style={style}
+      aria-hidden={title === undefined ? true : undefined}
+    >
+      <rect x="4" y="10" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="15" r="1.5" fill="currentColor" />
+    </svg>
+  );
+
+  if (title === undefined) {
+    return svg;
+  }
+
+  return (
+    <span className={styles.svgGlyphWrap} role="img" aria-label={title} title={title}>
+      {svg}
+    </span>
+  );
+}
+
+/** Spectator eye glyph (outlined pupil) — distinct from password `show`. */
+function ViewersIcon({ color, title, size }: SvgIconProps): ReactElement {
+  const px = getSvgBoxPixels(size);
+  const style: CSSProperties | undefined = color ? { color } : undefined;
+  const svg = (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={styles.svgGlyph}
+      style={style}
+      aria-hidden={title === undefined ? true : undefined}
+    >
+      <path
+        d="M1 12s4.5-7 11-7 11 7 11 7-4.5 7-11 7-11-7-11-7Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+
+  if (title === undefined) {
+    return svg;
+  }
+
+  return (
+    <span className={styles.svgGlyphWrap} role="img" aria-label={title} title={title}>
+      {svg}
+    </span>
+  );
+}
+
+/** Plus glyph used for primary "add" actions (rooms, items). */
+function PlusIcon({ color, title, size }: SvgIconProps): ReactElement {
+  const px = getSvgBoxPixels(size);
+  const style: CSSProperties | undefined = color ? { color } : undefined;
+  const svg = (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={styles.svgGlyph}
+      style={style}
+      aria-hidden={title === undefined ? true : undefined}
+    >
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
+    </svg>
+  );
+
+  if (title === undefined) {
+    return svg;
+  }
+
+  return (
+    <span className={styles.svgGlyphWrap} role="img" aria-label={title} title={title}>
+      {svg}
+    </span>
+  );
+}
+
 /** Three-line menu indicator built with CSS gradients (inherits `currentColor`). */
 function HamburgerIcon({ color, title, size }: SvgIconProps): ReactElement {
   const sizeClassName = getHamburgerSizeClassName(size);
@@ -197,8 +295,17 @@ export function Icon(props: IconProps): ReactElement {
   if (props.iconName === "hide") {
     return <HideIcon color={props.color} title={props.title} size={props.size} />;
   }
+  if (props.iconName === "lock") {
+    return <LockIcon color={props.color} title={props.title} size={props.size} />;
+  }
+  if (props.iconName === "plus") {
+    return <PlusIcon color={props.color} title={props.title} size={props.size} />;
+  }
   if (props.iconName === "show") {
     return <ShowIcon color={props.color} title={props.title} size={props.size} />;
+  }
+  if (props.iconName === "viewers") {
+    return <ViewersIcon color={props.color} title={props.title} size={props.size} />;
   }
   const unreachable: never = props.iconName;
   return unreachable;

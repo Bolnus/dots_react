@@ -68,21 +68,6 @@
   color: var(--text-primary);
 }
 
-.setupInput {
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-
-.setupInput::placeholder {
-  color: var(--text-muted);
-  font-weight: 400;
-}
-
 .setupError {
   margin: 0 0 12px;
   max-width: 48ch;

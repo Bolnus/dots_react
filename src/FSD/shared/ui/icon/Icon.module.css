@@ -1,3 +1,14 @@
+.svgGlyph {
+  display: block;
+  flex-shrink: 0;
+}
+
+.svgGlyphWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .hamburger {
   display: block;
   margin: 0 auto;

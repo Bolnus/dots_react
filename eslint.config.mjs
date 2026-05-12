@@ -56,7 +56,7 @@ export default defineConfig([
     },
     // ignores: ['eslint.config.*', '*.json', 'node_modules/*'],
     rules: {
-      // ESLint базовые правила:
+      // ESLint basic rules:
       curly: ["warn", "all"],
       "arrow-body-style": "off",
       "no-use-before-define": "off",
@@ -133,7 +133,7 @@ export default defineConfig([
       "prefer-promise-reject-errors": "warn",
       "no-implied-eval": "error",
 
-      // React:
+      // react:
       "react/jsx-filename-extension": "off",
       "react/prop-types": [
         "warn",
@@ -160,6 +160,9 @@ export default defineConfig([
       "react/no-unstable-nested-components": "off",
       "react/prefer-stateless-function": "off",
       "react/jsx-no-constructed-context-values": "off",
+
+      // react-hooks:
+      "react-hooks/set-state-in-effect": "off",
 
       // jsx-a11y:
       "jsx-a11y/anchor-is-valid": ["warn", { aspects: ["invalidHref"] }],
@@ -203,10 +206,10 @@ export default defineConfig([
       // "import/no-self-import": "warn",
       // "import/no-import-module-exports": "warn",
 
-      // Prettier:
+      // prettier:
       "prettier/prettier": "warn",
 
-      // Stylistic:
+      // stylistic:
       "@stylistic/member-delimiter-style": "error",
       "@stylistic/type-annotation-spacing": "error",
       "@stylistic/brace-style": ["warn", "1tbs"],
@@ -252,7 +255,7 @@ export default defineConfig([
       "sonarjs/cognitive-complexity": "warn",
       "sonarjs/no-control-regex": "off",
 
-      // TypeScript:
+      // typescript:
       "@typescript-eslint/member-ordering": "error",
       "@typescript-eslint/no-unused-vars": ["warn", { varsIgnorePattern: "^React$" }],
       "@typescript-eslint/ban-ts-comment": "off",
@@ -280,7 +283,15 @@ export default defineConfig([
       "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/consistent-type-definitions": "off",
       "@typescript-eslint/no-inferrable-types": "off",
-      "@typescript-eslint/no-unnecessary-type-assertion": "warn"
+      "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "type-imports",
+          fixStyle: "separate-type-imports",
+          disallowTypeAnnotations: true
+        }
+      ]
     }
   }
 ]);

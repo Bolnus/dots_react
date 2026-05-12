@@ -1,6 +1,6 @@
 import { UiSize } from "../../lib/common/types";
 
-export type IconName = "fetching" | "hamburger";
+export type IconName = "close" | "fetching" | "hamburger" | "hide" | "show";
 
 export type IconProps = Readonly<{
   color?: string;

@@ -12,6 +12,7 @@ import { DotsGameBackLink } from "./DotsGameBackLink";
 import { DotsGamePlay } from "./DotsGamePlay";
 import { DotsGameStartButton } from "./DotsGameStartButton";
 import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
+import { TextInput } from "@/FSD/shared/ui/input/TextInput";
 import { NumberInputType } from "@/FSD/shared/ui/input/types";
 
 const GRID_MIN = 3;
@@ -127,25 +128,11 @@ export function DotsGame(): ReactElement {
         </label>
         <label className={styles.setupLabel}>
           <span>{t("playerName0")}</span>
-          <input
-            className={styles.setupInput}
-            type="text"
-            autoComplete="off"
-            value={name0}
-            onChange={(e) => setName0(e.target.value)}
-            placeholder={t("player0")}
-          />
+          <TextInput value={name0} onChange={setName0} placeholder={t("player0")} isClearable />
         </label>
         <label className={styles.setupLabel}>
           <span>{t("playerName1")}</span>
-          <input
-            className={styles.setupInput}
-            type="text"
-            autoComplete="off"
-            value={name1}
-            onChange={(e) => setName1(e.target.value)}
-            placeholder={t("player1")}
-          />
+          <TextInput value={name1} onChange={setName1} placeholder={t("player1")} isClearable />
         </label>
       </div>
       {setupError ? <p className={styles.setupError}>{setupError}</p> : null}

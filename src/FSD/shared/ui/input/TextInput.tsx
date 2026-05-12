@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import classes from "./TextInput.module.scss";
+import classes from "./TextInput.module.css";
 import { resetScrollOnBlur } from "../../lib/common/hadlers";
 import { ButtonIcon } from "../button-icon/ButtonIcon";
 
@@ -17,20 +17,21 @@ interface TextInputProps {
   isFetching?: boolean;
 }
 
-function onInputChange(localEvent: React.ChangeEvent<HTMLInputElement>, onChange?: (str: string) => void) {
+/** Forwards the native input value to `onChange`. */
+function onInputChange(localEvent: React.ChangeEvent<HTMLInputElement>, onChange?: (str: string) => void): void {
   localEvent.preventDefault();
-  if (onChange) {
-    const inputElement = localEvent.target;
-    onChange(inputElement.value);
+  if (!onChange) {
+    return;
   }
+  onChange(localEvent.target.value);
 }
 
-function onClearInput(onChange?: (str: string) => void) {
-  if (onChange) {
-    onChange("");
-  }
+/** Clears the field via `onChange("")`. */
+function onClearInput(onChange?: (str: string) => void): void {
+  onChange?.("");
 }
 
+/** Controlled text field with optional clear and password-visibility controls. */
 export function TextInput({
   value,
   onChange,
@@ -40,14 +41,15 @@ export function TextInput({
   placeholder,
   isPassword,
   name,
-  autoComplete,
+  autoComplete = "off",
   isFetching
-}: Readonly<TextInputProps>): JSX.Element {
+}: Readonly<TextInputProps>): React.ReactElement {
   const [isPasswordVisible, setIsPasswordVisible] = React.useState(false);
   const indicatorsVisible = isClearable || isPassword;
 
   React.useEffect(() => {
     if (!value) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- keep password toggle in sync when controlled `value` clears (including parent-driven).
       setIsPasswordVisible(false);
     }
   }, [value]);
@@ -69,14 +71,13 @@ export function TextInput({
       />
       {indicatorsVisible && value ? (
         <div className={classes.textInput__indicatorContainer}>
-          <span className={classes.textInput__spacer} />
           {isClearable && (
             <div className={classes.textInput__indicator}>
               <ButtonIcon
                 onClick={() => onClearInput(onChange)}
                 iconName="close"
-                size={UiSize.sm}
-                color="var(--fontColorFirm)"
+                iconSize="sm"
+                background="ghost"
                 isFetching={isFetching}
                 preventDefault
               />
@@ -87,8 +88,8 @@ export function TextInput({
               <ButtonIcon
                 onClick={() => setIsPasswordVisible((prev) => !prev)}
                 iconName={isPasswordVisible ? "hide" : "show"}
-                iconSize={UiSize.sm}
-                color="var(--fontColorFirm)"
+                iconSize="sm"
+                background="ghost"
                 isFetching={isFetching}
                 preventDefault
               />

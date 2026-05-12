@@ -52,6 +52,7 @@ type DotsGamePlayBoardLayersProps = Readonly<{
   dotData: ReturnType<typeof buildDotData>;
   dotClassMap: DotClassMap;
   pendingDotKey: string | null;
+  chainPathDotKeys: ReadonlySet<string>;
 }>;
 
 /** Renders the board SVG (grid, fills, chain preview) and the absolutely positioned dots layer. */
@@ -65,7 +66,8 @@ function DotsGamePlayBoardLayers({
   previewStroke,
   dotData,
   dotClassMap,
-  pendingDotKey
+  pendingDotKey,
+  chainPathDotKeys
 }: DotsGamePlayBoardLayersProps): ReactElement {
   return (
     <>
@@ -95,7 +97,9 @@ function DotsGamePlayBoardLayers({
           <div
             key={d.key}
             className={`${styles.dot} ${dotClassFor(d.owner, d.blocked, dotClassMap)}${
-              pendingDotKey && d.key === pendingDotKey ? ` ${styles.dotPending}` : ""
+              (pendingDotKey !== null && d.key === pendingDotKey) || chainPathDotKeys.has(d.key)
+                ? ` ${styles.dotPending}`
+                : ""
             }`}
             style={{ left: d.left, top: d.top }}
           />
@@ -251,6 +255,16 @@ export function DotsGamePlay({ config, playerLabels, onExit, preview = false }: 
 
   const dotClassMap: DotClassMap = { p0: styles.dotP0, p1: styles.dotP1, blockedEmpty: styles.dotBlockedEmpty };
   const pendingDotKey = pendingDot ? `d-${pendingDot.r}-${pendingDot.c}` : null;
+  const chainPathDotKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (mode !== "drawPolygon") {
+      return keys;
+    }
+    for (const p of chainPath) {
+      keys.add(`d-${p.r}-${p.c}`);
+    }
+    return keys;
+  }, [mode, chainPath]);
   const previewStroke = previewStrokeForChain(mode, state.chainStart, state.cells);
 
   const wrapClassName = preview ? `${styles.wrap} ${styles.previewWrap}` : styles.wrap;
@@ -304,6 +318,7 @@ export function DotsGamePlay({ config, playerLabels, onExit, preview = false }: 
             dotData={dotData}
             dotClassMap={dotClassMap}
             pendingDotKey={pendingDotKey}
+            chainPathDotKeys={chainPathDotKeys}
           />
         </div>
       </div>

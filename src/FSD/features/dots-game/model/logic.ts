@@ -1,4 +1,38 @@
 import type { CellState, DotsGameConfig, FilledPolygon, GridPoint, PlayerId } from "./types";
+import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "./consts";
+import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
+
+const DEFAULT_DOTS_ROWS = 28;
+const DEFAULT_DOTS_COLS = 16;
+const DEFAULT_DOTS_CELL_SIZE_PX = 30;
+
+/** True when `value` is an integer grid dimension in `[DOTS_GRID_MIN, DOTS_GRID_MAX]`. */
+export function isValidGridDimension(value: number | undefined): value is number {
+  return (
+    value !== undefined &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= DOTS_GRID_MIN &&
+    value <= DOTS_GRID_MAX
+  );
+}
+
+/** Parses a stored integer for `key`, or `undefined` if missing / invalid / unavailable. */
+function readStoredInt(key: LocalStorageKey): number | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null || raw === "") {
+      return undefined;
+    }
+    const n = Number.parseInt(raw, 10);
+    return Number.isNaN(n) ? undefined : n;
+  } catch {
+    return undefined;
+  }
+}
 
 /** King-neighbour (8-connected), matching Qt distance < sqrt(2)*scale + 1 on a square grid. */
 export function areNeighbourCells(a: GridPoint, b: GridPoint): boolean {
@@ -14,9 +48,15 @@ export function createEmptyGrid(config: DotsGameConfig): CellState[][] {
   );
 }
 
-/** Default board dimensions, aligned with the Qt grid spacing concept. */
+/** Default board dimensions: persisted values from `localStorage` when valid, else Qt-aligned fallbacks. */
 export function defaultDotsConfig(): DotsGameConfig {
-  return { rows: 28, cols: 16, cellSizePx: 30 };
+  const rowsRaw = readStoredInt(LocalStorageKey.DotsGameDefaultRows);
+  const colsRaw = readStoredInt(LocalStorageKey.DotsGameDefaultCols);
+  return {
+    rows: isValidGridDimension(rowsRaw) ? rowsRaw : DEFAULT_DOTS_ROWS,
+    cols: isValidGridDimension(colsRaw) ? colsRaw : DEFAULT_DOTS_COLS,
+    cellSizePx: DEFAULT_DOTS_CELL_SIZE_PX
+  };
 }
 
 /** Copies the 2D grid so reducer updates remain immutable. */

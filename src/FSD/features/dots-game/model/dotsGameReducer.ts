@@ -4,7 +4,6 @@ import {
   computeCapture,
   computeScoresFromGridAndPolygons,
   createEmptyGrid,
-  defaultDotsConfig,
   ringFromChainPath
 } from "./logic";
 import type {
@@ -33,11 +32,6 @@ export function initialDotsGameStateFromConfig(config: DotsGameConfig): DotsGame
     polygons: [],
     undoStack: []
   };
-}
-
-/** Initial board using `defaultDotsConfig()` dimensions. */
-export function initialDotsGameState(): DotsGameState {
-  return initialDotsGameStateFromConfig(defaultDotsConfig());
 }
 
 /** Player to place the next dot: even count → player 0, odd → player 1. */

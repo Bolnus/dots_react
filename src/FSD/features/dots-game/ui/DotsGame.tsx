@@ -4,19 +4,18 @@ import { useMemo, useState, type Dispatch, type ReactElement, type SetStateActio
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 
-import { defaultDotsConfig } from "../model/logic";
+import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "../model/consts";
+import { defaultDotsConfig, isValidGridDimension } from "../model/logic";
 import type { DotsGameConfig, PlayerId } from "../model/types";
 
 import styles from "./DotsGame.module.css";
 import { DotsGameBackLink } from "./DotsGameBackLink";
 import { DotsGamePlay } from "./DotsGamePlay";
 import { DotsGameStartButton } from "./DotsGameStartButton";
+import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
 import { TextInput } from "@/FSD/shared/ui/input/TextInput";
 import { NumberInputType } from "@/FSD/shared/ui/input/types";
-
-const GRID_MIN = 3;
-const GRID_MAX = 60;
 
 type Session = Readonly<{
   key: number;
@@ -38,19 +37,8 @@ type StartDotsGameSessionArgs = Readonly<{
 /** Validates grid setup and starts a session with the chosen config and labels. */
 function startDotsGameSession(args: StartDotsGameSessionArgs): void {
   const { rows, cols, name0, name1, cellSizePx, t, setSetupError, setSession } = args;
-  if (
-    rows === undefined ||
-    cols === undefined ||
-    !Number.isFinite(rows) ||
-    !Number.isFinite(cols) ||
-    !Number.isInteger(rows) ||
-    !Number.isInteger(cols) ||
-    rows < GRID_MIN ||
-    rows > GRID_MAX ||
-    cols < GRID_MIN ||
-    cols > GRID_MAX
-  ) {
-    setSetupError(t("invalidGridSize", { min: GRID_MIN, max: GRID_MAX }));
+  if (!isValidGridDimension(rows) || !isValidGridDimension(cols)) {
+    setSetupError(t("invalidGridSize", { min: DOTS_GRID_MIN, max: DOTS_GRID_MAX }));
     return;
   }
   setSetupError(null);
@@ -60,13 +48,12 @@ function startDotsGameSession(args: StartDotsGameSessionArgs): void {
     player1: name1.trim() || t("player1")
   };
   setSession({ key: Date.now(), config, labels });
-}
-
-/** True when `value` is an integer grid size in [GRID_MIN, GRID_MAX]. */
-function isValidGridDimension(value: number | undefined): value is number {
-  return (
-    value !== undefined && Number.isFinite(value) && Number.isInteger(value) && value >= GRID_MIN && value <= GRID_MAX
-  );
+  try {
+    localStorage.setItem(LocalStorageKey.DotsGameDefaultRows, String(rows));
+    localStorage.setItem(LocalStorageKey.DotsGameDefaultCols, String(cols));
+  } catch {
+    /* Quota / private mode: ignore */
+  }
 }
 
 /** Dots (polygon capture): setup (stage 1) then board (stage 2). */
@@ -120,11 +107,23 @@ export function DotsGame(): ReactElement {
       <div className={styles.setupFields}>
         <label className={styles.setupLabel}>
           <span>{t("rowsLabel")}</span>
-          <NumberInput type={NumberInputType.Unsigned} value={rows} min={GRID_MIN} max={GRID_MAX} onChange={setRows} />
+          <NumberInput
+            type={NumberInputType.Unsigned}
+            value={rows}
+            min={DOTS_GRID_MIN}
+            max={DOTS_GRID_MAX}
+            onChange={setRows}
+          />
         </label>
         <label className={styles.setupLabel}>
           <span>{t("colsLabel")}</span>
-          <NumberInput type={NumberInputType.Unsigned} value={cols} min={GRID_MIN} max={GRID_MAX} onChange={setCols} />
+          <NumberInput
+            type={NumberInputType.Unsigned}
+            value={cols}
+            min={DOTS_GRID_MIN}
+            max={DOTS_GRID_MAX}
+            onChange={setCols}
+          />
         </label>
         <label className={styles.setupLabel}>
           <span>{t("playerName0")}</span>

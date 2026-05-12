@@ -57,7 +57,7 @@ function startDotsGameSession(args: StartDotsGameSessionArgs): void {
 }
 
 /** Dots (polygon capture): setup (stage 1) then board (stage 2). */
-export function DotsGame(): ReactElement {
+export function DotsGame(): ReactElement | null {
   const t = useTranslations("DotsGame");
   const defaults = useMemo(() => defaultDotsConfig(), []);
   const [rows, setRows] = useState<number | undefined>(() => defaults.rows);

@@ -33,6 +33,7 @@
     "typescript-eslint": "^8.59.1"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.10",
     "next": "^16.2.4",
     "next-intl": "^4.11.0",
     "react": "^19.2.5",

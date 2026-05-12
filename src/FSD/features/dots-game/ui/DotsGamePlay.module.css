@@ -51,7 +51,7 @@
 
 .turnLine {
   color: var(--text-muted);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .actions {

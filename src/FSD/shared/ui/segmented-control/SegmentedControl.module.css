@@ -13,7 +13,7 @@
   padding: 8px 12px;
   border: none;
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-secondary);
   font-weight: 500;
   color: var(--text-muted);
   background: transparent;

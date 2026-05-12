@@ -1,4 +1,4 @@
-import { UiSize } from "../../lib/common/types";
+import type { UiSize } from "../../lib/common/types";
 
 export type IconName = "close" | "fetching" | "hamburger" | "hide" | "show";
 

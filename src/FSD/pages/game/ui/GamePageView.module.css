@@ -9,7 +9,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 20px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-secondary);
   font-weight: 500;
   color: var(--accent);
   transition: opacity 0.2s ease;
@@ -21,7 +21,7 @@
 
 .title {
   margin: 0 0 12px;
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: var(--font-size-section-title);
   font-weight: 700;
   letter-spacing: -0.02em;
 }

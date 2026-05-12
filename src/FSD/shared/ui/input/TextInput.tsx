@@ -49,7 +49,6 @@ export function TextInput({
 
   React.useEffect(() => {
     if (!value) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- keep password toggle in sync when controlled `value` clears (including parent-driven).
       setIsPasswordVisible(false);
     }
   }, [value]);

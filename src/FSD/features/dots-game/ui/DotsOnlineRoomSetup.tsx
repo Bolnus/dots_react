@@ -24,8 +24,8 @@ import { NumberInputType } from "@/FSD/shared/ui/input/types";
 const PLAYER_SLOTS = 2;
 
 export type CreateRoomDraft = Readonly<{
+  name: string;
   config: DotsGameConfig;
-  isPrivate: boolean;
   password: string;
 }>;
 
@@ -40,23 +40,24 @@ export type DotsOnlineRoomSetupProps = Readonly<{
 }>;
 
 type DraftFormState = Readonly<{
+  name: string;
   rows: number | undefined;
   cols: number | undefined;
-  isPrivate: boolean;
   password: string;
 }>;
 
-type ConfigFieldsProps = Readonly<{
+type GridFieldsProps = Readonly<{
   rows: number | undefined;
   cols: number | undefined;
-  isPrivate: boolean;
-  password: string;
-  hasPasswordOnServer: boolean;
-  showPassword: boolean;
   disabled: boolean;
   onRowsChange: (value: number | undefined) => void;
   onColsChange: (value: number | undefined) => void;
-  onPrivateChange: (value: boolean) => void;
+}>;
+
+type DraftIdentityFieldsProps = Readonly<{
+  name: string;
+  password: string;
+  onNameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
 }>;
 
@@ -96,10 +97,9 @@ type InRoomSetupBodyProps = Readonly<{
   startError: string | null;
 }>;
 
-/** Shared grid / privacy / password form block (used by both draft and in-room modes). */
-function ConfigFields(props: ConfigFieldsProps): ReactElement {
+/** Grid-size form block (rows + cols); shared between draft and in-room modes. */
+function GridSizeFields(props: GridFieldsProps): ReactElement {
   const t = useTranslations("DotsGame");
-  const passwordPlaceholder = props.hasPasswordOnServer ? "••••••" : t("passwordPlaceholder");
   return (
     <div className={styles.fields}>
       <label className={styles.fieldLabel}>
@@ -124,27 +124,33 @@ function ConfigFields(props: ConfigFieldsProps): ReactElement {
           disabled={props.disabled}
         />
       </label>
-      {props.showPassword ? (
-        <label className={styles.fieldLabel}>
-          <span>{t("passwordOptional")}</span>
-          <TextInput
-            value={props.password}
-            onChange={props.onPasswordChange}
-            placeholder={passwordPlaceholder}
-            isPassword
-            isClearable
-            disabled={props.disabled}
-          />
-        </label>
-      ) : null}
-      <label className={styles.checkboxLabel}>
-        <input
-          type="checkbox"
-          checked={props.isPrivate}
-          onChange={(event) => props.onPrivateChange(event.target.checked)}
-          disabled={props.disabled}
+    </div>
+  );
+}
+
+/** Draft-only fields (room name + optional password); password emptiness flips privacy. */
+function DraftIdentityFields(props: DraftIdentityFieldsProps): ReactElement {
+  const t = useTranslations("DotsGame");
+  return (
+    <div className={styles.fields}>
+      <label className={styles.fieldLabel}>
+        <span>{t("roomNameLabel")}</span>
+        <TextInput
+          value={props.name}
+          onChange={props.onNameChange}
+          placeholder={t("roomNamePlaceholder")}
+          isClearable
         />
-        <span>{t("private")}</span>
+      </label>
+      <label className={styles.fieldLabel}>
+        <span>{t("passwordOptional")}</span>
+        <TextInput
+          value={props.password}
+          onChange={props.onPasswordChange}
+          placeholder={t("passwordPlaceholder")}
+          isPassword
+          isClearable
+        />
       </label>
     </div>
   );
@@ -209,18 +215,18 @@ function DraftRoomSetupBody({ draft, setDraft, defaults, onBack, onCreate }: Dra
         <h2 className={styles.title}>{t("createRoomTitle")}</h2>
         <span aria-hidden style={{ width: 1 }} />
       </div>
-      <ConfigFields
+      <DraftIdentityFields
+        name={draft.name}
+        password={draft.password}
+        onNameChange={(value) => setDraft({ ...draft, name: value })}
+        onPasswordChange={(value) => setDraft({ ...draft, password: value })}
+      />
+      <GridSizeFields
         rows={draft.rows}
         cols={draft.cols}
-        isPrivate={draft.isPrivate}
-        password={draft.password}
-        hasPasswordOnServer={false}
-        showPassword
         disabled={false}
         onRowsChange={(value) => setDraft({ ...draft, rows: value })}
         onColsChange={(value) => setDraft({ ...draft, cols: value })}
-        onPrivateChange={(value) => setDraft({ ...draft, isPrivate: value })}
-        onPasswordChange={(value) => setDraft({ ...draft, password: value })}
       />
       <div className={styles.actions}>
         <DotsGameStartButton onClick={onCreate}>{t("createRoomAction")}</DotsGameStartButton>
@@ -285,13 +291,9 @@ function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
         </button>
       </div>
       {isOwner ? null : <p className={styles.subtitle}>{t("ownerOnlyConfig")}</p>}
-      <ConfigFields
+      <GridSizeFields
         rows={room.config.rows}
         cols={room.config.cols}
-        isPrivate={room.isPrivate}
-        password=""
-        hasPasswordOnServer={room.hasPassword}
-        showPassword={isOwner}
         disabled={!isOwner}
         onRowsChange={(value) =>
           props.onPatch({
@@ -303,8 +305,6 @@ function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
             config: { ...room.config, cols: isValidGridDimension(value) ? value : room.config.cols }
           })
         }
-        onPrivateChange={(value) => props.onPatch({ isPrivate: value })}
-        onPasswordChange={(value) => props.onPatch({ password: value })}
       />
       <div className={styles.rosters}>
         <RosterPanel
@@ -347,9 +347,9 @@ function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
 export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactElement {
   const defaults = useMemo(() => defaultDotsConfig(), []);
   const [draft, setDraft] = useState<DraftFormState>(() => ({
+    name: "",
     rows: defaults.rows,
     cols: defaults.cols,
-    isPrivate: false,
     password: ""
   }));
   const [startError, setStartError] = useState<string | null>(null);
@@ -378,8 +378,8 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
         onCreate={() => {
           const effectiveConfig = buildEffectiveConfig({ rows: draft.rows, cols: draft.cols, defaults });
           onCreateRoom({
+            name: draft.name,
             config: effectiveConfig,
-            isPrivate: draft.isPrivate || draft.password.trim().length > 0,
             password: draft.password
           });
         }}

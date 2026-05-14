@@ -173,15 +173,23 @@ export function useDotsOnlineGame(args: UseDotsOnlineGameArgs): UseDotsOnlineGam
 
   const placeLmb = useCallback(
     (point: GridPoint): void => {
+      if (!isMyTurn || !serverState || !slot) {
+        return;
+      }
+      const pending = ownLocal.pendingDot;
+      if (ownLocal.mode === "play" && pending !== null && pending.r === point.r && pending.c === point.c) {
+        commitPlacement(pending, slot, serverState);
+        return;
+      }
       const next = applyLocalAction({ type: "PLACE_LMB", point });
-      if (!next || !serverState || !slot) {
+      if (!next) {
         return;
       }
       if (next.mode === "drawPolygon" && isChainClosed(next)) {
         commitCapture(next.chainPath, slot, serverState);
       }
     },
-    [applyLocalAction, serverState, slot, commitCapture]
+    [applyLocalAction, isMyTurn, serverState, slot, commitCapture, commitPlacement, ownLocal]
   );
 
   const polygonClick = useCallback(

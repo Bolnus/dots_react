@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 
 import type { DotsRoomDetail } from "../api/dotsOnlineApiTypes";
+import { useRoomLive } from "../api/useRoomLive";
 import { useSendGameAction } from "../api/useSendGameAction";
 import { useDotsOnlineGame } from "../model/useDotsOnlineGame";
 
@@ -35,8 +36,10 @@ function computeStatusText(args: StatusTextArgs): string {
 }
 
 /** Online play wrapper: drives `DotsBoardView` with `useDotsOnlineGame` + viewer / status chrome. */
-export function DotsOnlinePlay({ room, userId, onExit }: DotsOnlinePlayProps): ReactElement {
+export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnlinePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
+  const live = useRoomLive(initialRoom.id);
+  const room = live.room ?? initialRoom;
   const send = useSendGameAction(room.id);
   const online = useDotsOnlineGame({ room, userId, send });
 

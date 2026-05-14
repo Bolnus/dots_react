@@ -14,10 +14,10 @@ import type {
   StartGameRequest
 } from "./dotsOnlineApiTypes";
 import type { DotsLocalState } from "../model/localState";
-import { reduceServer } from "../model/serverReducer";
+import { currentServerPlacingPlayer, reduceServer } from "../model/serverReducer";
 import { initialServerStateFromConfig } from "../model/serverState";
 import type { DotsServerGameState } from "../model/serverState";
-import type { DotsGameConfig, PlayerId } from "../model/types";
+import type { DotsGameConfig, GridPoint, PlayerId } from "../model/types";
 
 /** Simulated latency for REST mock calls (ms). */
 const REST_LATENCY_MS = 80;
@@ -25,6 +25,12 @@ const REST_LATENCY_MS = 80;
 const REALTIME_LATENCY_MS = 25;
 /** Maximum number of players a dots room accepts (the second slot is the opponent). */
 const MAX_PLAYERS = 2;
+/** Delay before a bot opponent joins a freshly-created user-owned waiting room. */
+const BOT_JOIN_DELAY_MS = 1500;
+/** Delay between a bot's turn becoming active and the bot actually moving. */
+const BOT_MOVE_DELAY_MS = 850;
+/** Display names rotated for bot opponents in solo demos. */
+const BOT_DISPLAY_NAMES = ["Botty", "Pixel", "Echo", "Glitch", "Nova"] as const;
 
 type RoomRecord = {
   id: string;
@@ -46,8 +52,10 @@ type RoomSubscriber = (event: DotsRoomEvent) => void;
 
 const rooms = new Map<string, RoomRecord>();
 const subscribers = new Map<string, Set<RoomSubscriber>>();
+const botUserIds = new Set<string>();
 let nextRoomNumericId = 1;
 let nextUserNumericId = 1;
+let nextBotNameIndex = 0;
 let didSeed = false;
 
 /** Sleeps for `ms` to simulate network latency on the mocked transport. */
@@ -218,6 +226,113 @@ function seedDemoRoomsIfNeeded(): void {
   });
 }
 
+/** Returns the next round-robin bot display name (prefixed with an emoji for visibility). */
+function nextBotDisplayName(): string {
+  const name = BOT_DISPLAY_NAMES[nextBotNameIndex % BOT_DISPLAY_NAMES.length];
+  nextBotNameIndex += 1;
+  return `🤖 ${name}`;
+}
+
+/** Returns a uniform integer in `[0, maxExclusive)` using `crypto.getRandomValues` when available. */
+function randomInt(maxExclusive: number): number {
+  if (maxExclusive <= 0) {
+    return 0;
+  }
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0] % maxExclusive;
+  }
+  // eslint-disable-next-line sonarjs/pseudo-random
+  return Math.floor(Math.random() * maxExclusive);
+}
+
+/** Picks a random unowned, unblocked cell for the bot to claim (or `null` when the board is saturated). */
+function pickRandomEmptyCell(state: DotsServerGameState): GridPoint | null {
+  const candidates: GridPoint[] = [];
+  for (let rowIndex = 0; rowIndex < state.cells.length; rowIndex++) {
+    const row = state.cells[rowIndex];
+    for (let colIndex = 0; colIndex < row.length; colIndex++) {
+      const cell = row[colIndex];
+      if (cell.owner === null && !cell.blocked) {
+        candidates.push({ r: rowIndex, c: colIndex });
+      }
+    }
+  }
+  if (candidates.length === 0) {
+    return null;
+  }
+  return candidates[randomInt(candidates.length)];
+}
+
+/** Schedules a bot opponent to join the room after a short delay, only when a slot is free. */
+function scheduleBotJoinIfNeeded(roomId: string): void {
+  setTimeout(() => {
+    const room = rooms.get(roomId);
+    if (!room || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
+      return;
+    }
+    const botUserId = generateBotUserId();
+    botUserIds.add(botUserId);
+    room.players.push({
+      slot: "player1",
+      user: { userId: botUserId, displayName: nextBotDisplayName() }
+    });
+    broadcastRoomEvent(roomId, { type: "STATE_DELTA", room: toRoomDetail(room) });
+  }, BOT_JOIN_DELAY_MS);
+}
+
+/** Performs the bot's move synchronously when invoked; broadcasts the resulting state. */
+function runBotMove(roomId: string): void {
+  const room = rooms.get(roomId);
+  if (!room || !room.serverState || room.serverState.mode !== "play") {
+    return;
+  }
+  const acting = currentServerPlacingPlayer(room.serverState);
+  const actingPlayer = room.players.find((player) => player.slot === acting);
+  if (!actingPlayer || !botUserIds.has(actingPlayer.user.userId)) {
+    return;
+  }
+  const move = pickRandomEmptyCell(room.serverState);
+  if (!move) {
+    const surrendered = reduceServer(room.serverState, { type: "SURRENDER", by: acting });
+    if (surrendered === room.serverState) {
+      return;
+    }
+    room.serverState = surrendered;
+    if (surrendered.mode === "ended") {
+      room.status = "finished";
+    }
+    broadcastRoomEvent(roomId, { type: "STATE_DELTA", room: toRoomDetail(room) });
+    return;
+  }
+  const placed = reduceServer(room.serverState, { type: "COMMIT_PLACEMENT", point: move, by: acting });
+  if (placed === room.serverState) {
+    return;
+  }
+  room.serverState = placed;
+  room.presence = null;
+  room.presenceBy = null;
+  if (placed.mode === "ended") {
+    room.status = "finished";
+  }
+  broadcastRoomEvent(roomId, { type: "STATE_DELTA", room: toRoomDetail(room) });
+}
+
+/** If the active player is a bot, schedules its move after a short "thinking" delay. */
+function scheduleBotMoveIfBotTurn(roomId: string): void {
+  const room = rooms.get(roomId);
+  if (!room || !room.serverState || room.serverState.mode !== "play") {
+    return;
+  }
+  const acting = currentServerPlacingPlayer(room.serverState);
+  const actingPlayer = room.players.find((player) => player.slot === acting);
+  if (!actingPlayer || !botUserIds.has(actingPlayer.user.userId)) {
+    return;
+  }
+  setTimeout(() => runBotMove(roomId), BOT_MOVE_DELAY_MS);
+}
+
 /** Returns a snapshot of all rooms (lightweight summary view). */
 export async function fetchRooms(): Promise<DotsRoomSummary[]> {
   seedDemoRoomsIfNeeded();
@@ -263,6 +378,7 @@ export async function createRoom(request: CreateRoomRequest): Promise<DotsRoomDe
   };
   rooms.set(id, room);
   broadcastRoomEvent(id, { type: "ROOM_STATE", room: toRoomDetail(room) });
+  scheduleBotJoinIfNeeded(id);
   return toRoomDetail(room);
 }
 
@@ -360,6 +476,7 @@ export async function startGame(roomId: string, request: StartGameRequest): Prom
   room.presence = null;
   room.presenceBy = null;
   broadcastRoomEvent(roomId, { type: "STATE_DELTA", room: toRoomDetail(room) });
+  scheduleBotMoveIfBotTurn(roomId);
   return toRoomDetail(room);
 }
 
@@ -411,6 +528,7 @@ export async function applyCommittedAction(roomId: string, request: CommitAction
     room.status = "finished";
   }
   broadcastRoomEvent(roomId, { type: "STATE_DELTA", room: toRoomDetail(room) });
+  scheduleBotMoveIfBotTurn(roomId);
   return { status: "ok" };
 }
 

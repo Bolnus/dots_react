@@ -157,14 +157,16 @@ export function DotsGame(): ReactElement | null {
       if (!identity?.displayName) {
         return;
       }
+      const trimmedName = draft.name.trim();
+      const trimmedPassword = draft.password.trim();
       createMutation.mutate(
         {
-          name: `${identity.displayName}'s room`,
+          name: trimmedName || `${identity.displayName}'s room`,
           ownerUserId: identity.userId,
           ownerName: identity.displayName,
           config: draft.config,
-          isPrivate: draft.isPrivate,
-          password: draft.password
+          isPrivate: trimmedPassword.length > 0,
+          password: trimmedPassword
         },
         {
           onSuccess: (room) => {

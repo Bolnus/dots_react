@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { GAMES, isGameId } from "@/FSD/entities/game/model/games";
-import { DotsGame } from "@/FSD/features/dots-game/ui/DotsGame";
-import { Link } from "@/FSD/shared/lib/i18n/navigation";
+import { DotsGame } from "@/FSD/widgets/dots-game/ui/DotsGame";
+import { BackLink } from "@/FSD/shared/ui/back-link/BackLink";
 import { GamePageView } from "@/FSD/pages/game/ui/GamePageView";
 
 type GamePageProps = Readonly<{
@@ -62,11 +62,7 @@ export default async function GamePage({ params }: GamePageProps): Promise<React
 
   return (
     <GamePageView
-      backLink={
-        <Link href="/" prefetch={false}>
-          {tPage("back")}
-        </Link>
-      }
+      backLink={<BackLink href="/" label={tPage("back")} prefetch={false} />}
       title={title}
       note={tPage("comingSoon")}
     />

@@ -3,8 +3,8 @@
 import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 
-import type { DotsRoomSummary } from "../api/dotsOnlineApiTypes";
-import { useRoomsListQuery } from "../api/useRoomsListQuery";
+import type { DotsRoomSummary } from "../../api/dotsOnlineApiTypes";
+import { useRoomsListQuery } from "../../api/useRoomsListQuery";
 import styles from "./DotsOnlineRoomsList.module.css";
 import { DotsRoomItem } from "./DotsRoomItem";
 import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";

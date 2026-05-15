@@ -3,12 +3,12 @@
 import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 
-import type { DotsRoomDetail } from "../api/dotsOnlineApiTypes";
-import { useRoomLive } from "../api/useRoomLive";
-import { useSendGameAction } from "../api/useSendGameAction";
-import { useDotsOnlineGame } from "../model/useDotsOnlineGame";
+import type { DotsRoomDetail } from "../../api/dotsOnlineApiTypes";
+import { useRoomLive } from "../../api/useRoomLive";
+import { useSendGameAction } from "../../api/useSendGameAction";
+import { useDotsOnlineGame } from "../../model/useDotsOnlineGame";
 
-import { DotsBoardView } from "./DotsBoardView";
+import { DotsBoardView } from "../play/DotsBoardView";
 import styles from "./DotsOnlinePlay.module.css";
 import { Icon } from "@/FSD/shared/ui/icon/Icon";
 

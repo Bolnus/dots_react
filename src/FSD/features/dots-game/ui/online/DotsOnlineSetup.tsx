@@ -5,28 +5,30 @@ import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-import { useCreateRoomMutation } from "../api/useCreateRoomMutation";
-import { useJoinRoomMutation } from "../api/useJoinRoomMutation";
-import { useLeaveRoomMutation } from "../api/useLeaveRoomMutation";
-import { useRoomQuery } from "../api/useRoomQuery";
-import { useOnlineIdentity } from "../model/useOnlineIdentity";
+import { useCreateRoomMutation } from "../../api/useCreateRoomMutation";
+import { useJoinRoomMutation } from "../../api/useJoinRoomMutation";
+import { useLeaveRoomMutation } from "../../api/useLeaveRoomMutation";
+import { useRoomQuery } from "../../api/useRoomQuery";
+import { DotsOnlineViewKind, type DotsOnlineView } from "../../model/orchestratorTypes";
+import { createRoomFromDraft, exitGame, pickActiveRoomId, routeJoinedRoom } from "../../model/orchestratorUtils";
+import { useOnlineIdentity } from "../../model/useOnlineIdentity";
+import { DotsOrchestratorLoading } from "../lobby/DotsOrchestratorLoading";
 
-import styles from "./DotsGame.module.css";
-import { createRoomFromDraft, exitGame, pickActiveRoomId, routeJoinedRoom } from "./DotsGameOrchestratorUtils";
-import { DotsViewKind, type DotsView } from "./DotsGameOrchestratorTypes";
-import { DotsHotSeatSetup } from "./DotsHotSeatSetup";
-import { DotsMainMenu } from "./DotsMainMenu";
 import { DotsOnlinePlay } from "./DotsOnlinePlay";
 import { DotsOnlineRoomSetup } from "./DotsOnlineRoomSetup";
 import { DotsOnlineRoomsView } from "./DotsOnlineRoomsView";
-import { DotsOrchestratorLoading } from "./DotsOrchestratorLoading";
+import styles from "./DotsOnlineSetup.module.css";
 
-/** Top-level dots-feature orchestrator: routes between lobby / hot-seat / online flows. */
-export function DotsGame(): ReactElement | null {
+export type DotsOnlineSetupProps = Readonly<{
+  onBackToLobby: () => void;
+}>;
+
+/** Online flow: rooms list, room setup, and live play. */
+export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactElement | null {
   const t = useTranslations("DotsGame");
   const queryClient = useQueryClient();
   const { identity, setDisplayName } = useOnlineIdentity();
-  const [view, setView] = useState<DotsView>({ kind: DotsViewKind.Lobby });
+  const [view, setView] = useState<DotsOnlineView>({ kind: DotsOnlineViewKind.List });
 
   const { mutate: createRoom, data: createdRoom, isPending: isCreating, reset: resetCreate } = useCreateRoomMutation();
   const {
@@ -49,7 +51,7 @@ export function DotsGame(): ReactElement | null {
 
   useEffect(() => {
     if (createdRoom) {
-      setView({ kind: DotsViewKind.OnlineRoom, roomId: createdRoom.id });
+      setView({ kind: DotsOnlineViewKind.Room, roomId: createdRoom.id });
       resetCreate();
     }
   }, [createdRoom, resetCreate]);
@@ -63,25 +65,14 @@ export function DotsGame(): ReactElement | null {
 
   useEffect(() => {
     if (didLeaveSucceed || didLeaveFail) {
-      setView({ kind: DotsViewKind.OnlineList });
+      setView({ kind: DotsOnlineViewKind.List });
       resetLeave();
     }
   }, [didLeaveSucceed, didLeaveFail, resetLeave]);
 
   const portalRoot = useMemo(() => (typeof document !== "undefined" ? document.body : null), []);
 
-  if (view.kind === DotsViewKind.Lobby) {
-    return (
-      <DotsMainMenu
-        onPickOnline={() => setView({ kind: DotsViewKind.OnlineList })}
-        onPickHotSeat={() => setView({ kind: DotsViewKind.HotSeat })}
-      />
-    );
-  }
-  if (view.kind === DotsViewKind.HotSeat) {
-    return <DotsHotSeatSetup onBack={() => setView({ kind: DotsViewKind.Lobby })} />;
-  }
-  if (view.kind === DotsViewKind.OnlineList) {
+  if (view.kind === DotsOnlineViewKind.List) {
     return (
       <DotsOnlineRoomsView
         identity={identity}
@@ -92,6 +83,7 @@ export function DotsGame(): ReactElement | null {
         joinRoom={joinRoom}
         setDisplayName={setDisplayName}
         setView={setView}
+        onBackToLobby={onBackToLobby}
         onJoinErrorHandled={resetJoin}
       />
     );
@@ -99,15 +91,15 @@ export function DotsGame(): ReactElement | null {
   if (!identity?.displayName) {
     return null;
   }
-  if (view.kind === DotsViewKind.OnlineRoomDraft) {
+  if (view.kind === DotsOnlineViewKind.RoomDraft) {
     return (
       <DotsOnlineRoomSetup
         roomId={null}
         userId={identity.userId}
         isCreating={isCreating}
-        onBack={() => setView({ kind: DotsViewKind.OnlineList })}
-        onGameStarted={(roomId) => setView({ kind: DotsViewKind.OnlinePlay, roomId })}
-        onLeftRoom={() => setView({ kind: DotsViewKind.OnlineList })}
+        onBack={() => setView({ kind: DotsOnlineViewKind.List })}
+        onGameStarted={(roomId) => setView({ kind: DotsOnlineViewKind.Play, roomId })}
+        onLeftRoom={() => setView({ kind: DotsOnlineViewKind.List })}
         onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
       />
     );
@@ -115,15 +107,15 @@ export function DotsGame(): ReactElement | null {
   if (!activeRoom) {
     return <DotsOrchestratorLoading label={t("connectingToRoom")} />;
   }
-  if (view.kind === DotsViewKind.OnlineRoom) {
+  if (view.kind === DotsOnlineViewKind.Room) {
     return (
       <DotsOnlineRoomSetup
         roomId={view.roomId}
         userId={identity.userId}
         isCreating={false}
-        onBack={() => setView({ kind: DotsViewKind.OnlineList })}
-        onGameStarted={(roomId) => setView({ kind: DotsViewKind.OnlinePlay, roomId })}
-        onLeftRoom={() => setView({ kind: DotsViewKind.OnlineList })}
+        onBack={() => setView({ kind: DotsOnlineViewKind.List })}
+        onGameStarted={(roomId) => setView({ kind: DotsOnlineViewKind.Play, roomId })}
+        onLeftRoom={() => setView({ kind: DotsOnlineViewKind.List })}
         onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
       />
     );

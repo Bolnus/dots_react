@@ -4,8 +4,8 @@ import type { MouseEvent as ReactMouseEvent, ReactElement, ReactNode } from "rea
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 
-import type { UseDotsGameResult } from "../model/useDotsGame";
-import type { DotsGameConfig, DotsGameMode, GridPoint, PlayerId } from "../model/types";
+import type { UseDotsGameResult } from "../../model/useDotsGame";
+import type { DotsGameConfig, DotsGameMode, GridPoint, PlayerId } from "../../model/types";
 
 import type { DotClassMap, MutablePoint } from "./DotsGameTypes";
 import styles from "./DotsGamePlay.module.css";

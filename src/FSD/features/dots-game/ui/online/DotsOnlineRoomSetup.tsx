@@ -3,20 +3,20 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useTranslations } from "next-intl";
 
-import type { DotsRoomDetail } from "../api/dotsOnlineApiTypes";
-import { useLeaveRoomMutation } from "../api/useLeaveRoomMutation";
-import { useRoomLive } from "../api/useRoomLive";
-import { useStartGameMutation } from "../api/useStartGameMutation";
-import { useUpdateRoomMutation } from "../api/useUpdateRoomMutation";
-import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "../model/consts";
-import { defaultDotsConfig, isValidGridDimension } from "../model/logic";
-import type { DotsGameConfig, PlayerId } from "../model/types";
+import type { DotsRoomDetail } from "../../api/dotsOnlineApiTypes";
+import { useLeaveRoomMutation } from "../../api/useLeaveRoomMutation";
+import { useRoomLive } from "../../api/useRoomLive";
+import { useStartGameMutation } from "../../api/useStartGameMutation";
+import { useUpdateRoomMutation } from "../../api/useUpdateRoomMutation";
+import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "../../model/consts";
+import { defaultDotsConfig, isValidGridDimension } from "../../model/logic";
+import type { DotsGameConfig, PlayerId } from "../../model/types";
 
-import { DotsGamePlay } from "./DotsGamePlay";
-import { DotsGameStartButton } from "./DotsGameStartButton";
+import { DotsGamePlay } from "../play/DotsGamePlay";
+import { DotsGameStartButton } from "../play/DotsGameStartButton";
+import { RosterPanel, RostersGrid, type RosterUser } from "../roster/RosterPanel";
 import styles from "./DotsOnlineRoomSetup.module.css";
 import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";
-import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
 import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
 import { TextInput } from "@/FSD/shared/ui/input/TextInput";
 import { NumberInputType } from "@/FSD/shared/ui/input/types";
@@ -61,16 +61,6 @@ type DraftIdentityFieldsProps = Readonly<{
   password: string;
   onNameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
-}>;
-
-type RosterUser = Readonly<{ userId: string; displayName: string }>;
-
-type RosterProps = Readonly<{
-  title: string;
-  users: readonly RosterUser[];
-  ownerUserId: string;
-  canKick: boolean;
-  onKick: (userId: string) => void;
 }>;
 
 type EffectiveConfigArgs = Readonly<{
@@ -155,42 +145,6 @@ function DraftIdentityFields(props: DraftIdentityFieldsProps): ReactElement {
           isClearable
         />
       </label>
-    </div>
-  );
-}
-
-/** Single roster panel: players or viewers, with optional kick buttons for the owner. */
-function RosterPanel(props: RosterProps): ReactElement {
-  const t = useTranslations("DotsGame");
-  return (
-    <div className={styles.rosterPanel}>
-      <h3 className={styles.rosterTitle}>{props.title}</h3>
-      {props.users.length === 0 ? (
-        <div className={styles.rosterEmpty}>—</div>
-      ) : (
-        <ul className={styles.rosterList}>
-          {props.users.map((user) => {
-            const isOwnerRow = user.userId === props.ownerUserId;
-            return (
-              <li key={user.userId} className={styles.rosterRow}>
-                <span className={styles.rosterMain}>
-                  <span>{user.displayName}</span>
-                  {isOwnerRow ? <span className={styles.ownerBadge}>★</span> : null}
-                </span>
-                {props.canKick && !isOwnerRow ? (
-                  <ButtonIcon
-                    onClick={() => props.onKick(user.userId)}
-                    iconName="close"
-                    iconSize="sm"
-                    background="ghost"
-                    title={t("kick")}
-                  />
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </div>
   );
 }
@@ -318,7 +272,7 @@ function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
           })
         }
       />
-      <div className={styles.rosters}>
+      <RostersGrid>
         <RosterPanel
           title={t("players")}
           users={players}
@@ -333,7 +287,7 @@ function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
           canKick={isOwner}
           onKick={props.onKick}
         />
-      </div>
+      </RostersGrid>
       {props.startError ? <p className={styles.error}>{props.startError}</p> : null}
       {isOwner && !canStart ? <p className={styles.ownerHint}>{t("notEnoughPlayers")}</p> : null}
       <div className={styles.actions}>

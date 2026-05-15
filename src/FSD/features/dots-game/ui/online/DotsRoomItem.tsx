@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 
-import type { DotsRoomStatus, DotsRoomSummary } from "../api/dotsOnlineApiTypes";
+import type { DotsRoomStatus, DotsRoomSummary } from "../../api/dotsOnlineApiTypes";
 import styles from "./DotsRoomItem.module.css";
 import { Icon } from "@/FSD/shared/ui/icon/Icon";
 

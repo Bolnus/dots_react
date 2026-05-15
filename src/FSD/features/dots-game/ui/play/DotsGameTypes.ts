@@ -1,6 +1,6 @@
 "use client";
 
-import type { GridPoint } from "../model/types";
+import type { GridPoint } from "../../model/types";
 
 export type BoardPointerHandlers = Readonly<{
   mode: "play" | "drawPolygon" | "ended";

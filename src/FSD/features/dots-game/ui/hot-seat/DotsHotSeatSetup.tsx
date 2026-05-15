@@ -4,12 +4,12 @@ import { useMemo, useState, type Dispatch, type ReactElement, type SetStateActio
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 
-import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "../model/consts";
-import { defaultDotsConfig, isValidGridDimension } from "../model/logic";
-import type { DotsGameConfig, PlayerId } from "../model/types";
+import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "../../model/consts";
+import { defaultDotsConfig, isValidGridDimension } from "../../model/logic";
+import type { DotsGameConfig, PlayerId } from "../../model/types";
 
-import { DotsGamePlay } from "./DotsGamePlay";
-import { DotsGameStartButton } from "./DotsGameStartButton";
+import { DotsGamePlay } from "../play/DotsGamePlay";
+import { DotsGameStartButton } from "../play/DotsGameStartButton";
 import styles from "./DotsHotSeatSetup.module.css";
 import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";

@@ -2,10 +2,10 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 import type { QueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
-import type { JoinRoomRequest } from "../api/dotsOnlineApiTypes";
-import type { DotsOnlineIdentity } from "../model/useOnlineIdentity";
-
+import type { JoinRoomRequest } from "../../api/dotsOnlineApiTypes";
+import type { DotsOnlineIdentity } from "../../model/useOnlineIdentity";
 import {
   closeJoinModal,
   closeNameModal,
@@ -13,11 +13,10 @@ import {
   requestCreateRoom,
   submitJoinPassword,
   submitName
-} from "./DotsGameOrchestratorUtils";
-import { DotsViewKind, type DotsView, type PendingJoin } from "./DotsGameOrchestratorTypes";
-import { DotsOnlineJoinPasswordModal } from "./DotsOnlineJoinPasswordModal";
-import { DotsOnlineNamePromptModal } from "./DotsOnlineNamePromptModal";
+} from "../../model/orchestratorUtils";
+import type { DotsOnlineView, PendingJoin } from "../../model/orchestratorTypes";
 import { DotsOnlineRoomsList } from "./DotsOnlineRoomsList";
+import { PromptModal } from "@/FSD/shared/ui/prompt-modal/PromptModal";
 
 export type DotsOnlineRoomsViewProps = Readonly<{
   identity: DotsOnlineIdentity | null;
@@ -27,7 +26,8 @@ export type DotsOnlineRoomsViewProps = Readonly<{
   queryClient: QueryClient;
   joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest }>) => void;
   setDisplayName: (name: string) => void;
-  setView: (view: DotsView) => void;
+  setView: (view: DotsOnlineView) => void;
+  onBackToLobby: () => void;
   onJoinErrorHandled: () => void;
 }>;
 
@@ -41,8 +41,10 @@ export function DotsOnlineRoomsView({
   joinRoom,
   setDisplayName,
   setView,
+  onBackToLobby,
   onJoinErrorHandled
 }: DotsOnlineRoomsViewProps): ReactElement {
+  const t = useTranslations("DotsGame");
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [pendingJoin, setPendingJoin] = useState<PendingJoin | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export function DotsOnlineRoomsView({
         displayName={identity?.displayName ?? ""}
         isJoining={isJoining}
         joiningRoomId={joiningRoomId}
-        onBack={() => setView({ kind: DotsViewKind.Lobby })}
+        onBack={onBackToLobby}
         onCreateRoom={() => requestCreateRoom({ displayName: identity?.displayName, setIsNameModalOpen, setView })}
         onChangeName={() => setIsNameModalOpen(true)}
         onOpenRoom={(roomId) =>
@@ -84,17 +86,28 @@ export function DotsOnlineRoomsView({
         }
       />
       {identity ? (
-        <DotsOnlineNamePromptModal
+        <PromptModal
           isOpen={isNameModalOpen}
-          initialName={identity.displayName ?? ""}
-          isRequired={isNameRequired}
+          title={t("enterYourName")}
+          fieldLabel={t("namePlaceholder")}
+          submitLabel={t("submitName")}
+          placeholder={t("namePlaceholder")}
+          initialValue={identity.displayName ?? ""}
+          isClearable
+          isDismissable={!isNameRequired}
+          requireNonEmpty
           onSubmit={(name) => submitName({ name, setDisplayName, setIsNameModalOpen })}
           onClose={() => closeNameModal({ isRequired: isNameRequired, setIsNameModalOpen })}
         />
       ) : null}
       {pendingJoin ? (
-        <DotsOnlineJoinPasswordModal
+        <PromptModal
           isOpen
+          title={t("passwordPromptLabel")}
+          fieldLabel={t("password")}
+          submitLabel={t("submitName")}
+          isPassword
+          isClearable
           errorText={joinError}
           isSubmitting={isJoining}
           onSubmit={(password) =>

@@ -2,8 +2,8 @@
 
 import type { ReactElement } from "react";
 
-import { useDotsGame } from "../model/useDotsGame";
-import type { DotsGameConfig, PlayerId } from "../model/types";
+import { useDotsGame } from "../../model/useDotsGame";
+import type { DotsGameConfig, PlayerId } from "../../model/types";
 
 import { DotsBoardView } from "./DotsBoardView";
 

@@ -53,7 +53,7 @@ function RoomsBody({ isLoading, rooms, isJoining, joiningRoomId, onOpen, emptyLa
   );
 }
 
-/** Online rooms list view: rooms grid, plus-icon to create, and a Change-name button. */
+/** Online rooms list view: rooms grid, plus-icon to create, and display-name edit control. */
 export function DotsOnlineRoomsList({
   displayName,
   isJoining = false,
@@ -74,10 +74,18 @@ export function DotsOnlineRoomsList({
           <h2 className={styles.title}>{t("onlineRoomsTitle")}</h2>
         </div>
         <div className={styles.topBarRight}>
-          <span className={styles.nameTag}>{displayName}</span>
-          <button type="button" className={styles.changeNameButton} onClick={onChangeName} disabled={isJoining}>
-            {t("changeName")}
-          </button>
+          <div className={styles.nameBlock}>
+            <span className={styles.nameTag}>{displayName}</span>
+            <ButtonIcon
+              onClick={onChangeName}
+              iconName="pencil"
+              background="ghost"
+              iconSize="sm"
+              title={t("changeName")}
+              disabled={isJoining}
+              className={styles.nameBlockEdit}
+            />
+          </div>
           <ButtonIcon
             onClick={onCreateRoom}
             iconName="plus"

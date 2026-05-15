@@ -225,6 +225,42 @@ function ViewersIcon({ color, title, size }: SvgIconProps): ReactElement {
   );
 }
 
+/** Edit / rename pencil glyph (stroke inherits `currentColor`). */
+function PencilIcon({ color, title, size }: SvgIconProps): ReactElement {
+  const px = getSvgBoxPixels(size);
+  const style: CSSProperties | undefined = color ? { color } : undefined;
+  const svg = (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={styles.svgGlyph}
+      style={style}
+      aria-hidden={title === undefined ? true : undefined}
+    >
+      <path
+        d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
+  if (title === undefined) {
+    return svg;
+  }
+
+  return (
+    <span className={styles.svgGlyphWrap} role="img" aria-label={title} title={title}>
+      {svg}
+    </span>
+  );
+}
+
 /** Plus glyph used for primary "add" actions (rooms, items). */
 function PlusIcon({ color, title, size }: SvgIconProps): ReactElement {
   const px = getSvgBoxPixels(size);
@@ -297,6 +333,9 @@ export function Icon(props: IconProps): ReactElement {
   }
   if (props.iconName === "lock") {
     return <LockIcon color={props.color} title={props.title} size={props.size} />;
+  }
+  if (props.iconName === "pencil") {
+    return <PencilIcon color={props.color} title={props.title} size={props.size} />;
   }
   if (props.iconName === "plus") {
     return <PlusIcon color={props.color} title={props.title} size={props.size} />;

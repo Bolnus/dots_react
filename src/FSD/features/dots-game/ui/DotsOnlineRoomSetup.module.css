@@ -138,12 +138,6 @@
   margin: 8px 0 16px;
 }
 
-.actionContent {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .ownerHint {
   font-size: var(--font-size-secondary);
   color: var(--text-muted);

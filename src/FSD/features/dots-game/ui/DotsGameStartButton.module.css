@@ -96,6 +96,12 @@
   animation: none;
 }
 
+.loadingContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wrapper::before {
     animation: none;

@@ -13,29 +13,7 @@ import { DOTS_QUERY_KEYS } from "../api/queryKeys";
 import type { DotsOnlineIdentity } from "../model/useOnlineIdentity";
 
 import type { CreateRoomDraft } from "./DotsOnlineRoomSetup";
-
-export const VIEW_KIND = {
-  lobby: "lobby",
-  hotSeat: "hotseat",
-  onlineList: "online-list",
-  onlineRoomDraft: "online-room-draft",
-  onlineRoom: "online-room",
-  onlinePlay: "online-play"
-} as const;
-
-type DotsView =
-  | { kind: typeof VIEW_KIND.lobby }
-  | { kind: typeof VIEW_KIND.hotSeat }
-  | { kind: typeof VIEW_KIND.onlineList }
-  | { kind: typeof VIEW_KIND.onlineRoomDraft }
-  | { kind: typeof VIEW_KIND.onlineRoom; roomId: string }
-  | { kind: typeof VIEW_KIND.onlinePlay; roomId: string };
-
-type PendingJoin = Readonly<{
-  roomId: string;
-  asViewer: boolean;
-  needsPassword: boolean;
-}>;
+import { DotsViewKind, type DotsView, type PendingJoin } from "./DotsGameOrchestratorTypes";
 
 /** Looks up a room summary from the cached rooms list (no network round-trip). */
 export function findRoomSummary(cached: DotsRoomSummary[] | undefined, roomId: string): DotsRoomSummary | null {
@@ -47,26 +25,10 @@ export function findRoomSummary(cached: DotsRoomSummary[] | undefined, roomId: s
 
 /** Picks the active room id when the view is bound to a specific room. */
 export function pickActiveRoomId(view: DotsView): string | null {
-  if (view.kind === VIEW_KIND.onlineRoom || view.kind === VIEW_KIND.onlinePlay) {
+  if (view.kind === DotsViewKind.OnlineRoom || view.kind === DotsViewKind.OnlinePlay) {
     return view.roomId;
   }
   return null;
-}
-
-/** Opens the name modal when no name is set, then routes to the online rooms list. */
-export function pickOnline({
-  displayName,
-  setIsNameModalOpen,
-  setView
-}: Readonly<{
-  displayName: string | null | undefined;
-  setIsNameModalOpen: (open: boolean) => void;
-  setView: (view: DotsView) => void;
-}>): void {
-  if (!displayName) {
-    setIsNameModalOpen(true);
-  }
-  setView({ kind: VIEW_KIND.onlineList });
 }
 
 /** Persists the entered name and closes the name modal. */
@@ -197,19 +159,16 @@ export function createRoomFromDraft({
 /** Routes the joined room snapshot into the appropriate online view (lobby or active game). */
 export function routeJoinedRoom({
   room,
-  setView,
-  setPendingJoin
+  setView
 }: Readonly<{
   room: DotsRoomDetail;
   setView: (view: DotsView) => void;
-  setPendingJoin: (value: PendingJoin | null) => void;
 }>): void {
-  setPendingJoin(null);
   if (room.status === "waiting") {
-    setView({ kind: VIEW_KIND.onlineRoom, roomId: room.id });
+    setView({ kind: DotsViewKind.OnlineRoom, roomId: room.id });
     return;
   }
-  setView({ kind: VIEW_KIND.onlinePlay, roomId: room.id });
+  setView({ kind: DotsViewKind.OnlinePlay, roomId: room.id });
 }
 
 /** Fires the leave mutation when leaving active gameplay; otherwise navigates straight back. */
@@ -224,8 +183,8 @@ export function exitGame({
   leaveRoom: (args: Readonly<{ roomId: string; request: LeaveRoomRequest }>) => void;
   setView: (view: DotsView) => void;
 }>): void {
-  if (view.kind !== VIEW_KIND.onlinePlay || !identity) {
-    setView({ kind: VIEW_KIND.onlineList });
+  if (view.kind !== DotsViewKind.OnlinePlay || !identity) {
+    setView({ kind: DotsViewKind.OnlineList });
     return;
   }
   leaveRoom({ roomId: view.roomId, request: { userId: identity.userId } });
@@ -272,7 +231,7 @@ export function requestCreateRoom({
     setIsNameModalOpen(true);
     return;
   }
-  setView({ kind: VIEW_KIND.onlineRoomDraft });
+  setView({ kind: DotsViewKind.OnlineRoomDraft });
 }
 
 /** Closes the join-password modal and clears any in-flight error. */

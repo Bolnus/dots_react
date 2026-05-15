@@ -16,7 +16,7 @@ export function GamePageView({ backLink, title, note, children }: GamePageViewPr
       {backLink ? <div className={styles.back}>{backLink}</div> : null}
       <h1 className={styles.title}>{title}</h1>
       {note ? <p className={styles.note}>{note}</p> : null}
-      {children}
+      {children ? <div className={styles.content}>{children}</div> : null}
     </main>
   );
 }

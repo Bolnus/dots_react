@@ -12,54 +12,21 @@ import { useRoomQuery } from "../api/useRoomQuery";
 import { useOnlineIdentity } from "../model/useOnlineIdentity";
 
 import styles from "./DotsGame.module.css";
-import { DotsGameLobby } from "./DotsGameLobby";
-import {
-  VIEW_KIND,
-  closeJoinModal,
-  closeNameModal,
-  createRoomFromDraft,
-  exitGame,
-  openRoom,
-  pickActiveRoomId,
-  pickOnline,
-  requestCreateRoom,
-  routeJoinedRoom,
-  submitJoinPassword,
-  submitName
-} from "./DotsGameOrchestratorUtils";
+import { createRoomFromDraft, exitGame, pickActiveRoomId, routeJoinedRoom } from "./DotsGameOrchestratorUtils";
+import { DotsViewKind, type DotsView } from "./DotsGameOrchestratorTypes";
 import { DotsHotSeatSetup } from "./DotsHotSeatSetup";
-import { DotsOnlineJoinPasswordModal } from "./DotsOnlineJoinPasswordModal";
-import { DotsOnlineNamePromptModal } from "./DotsOnlineNamePromptModal";
-import { DotsOnlineRoomSetup } from "./DotsOnlineRoomSetup";
+import { DotsMainMenu } from "./DotsMainMenu";
 import { DotsOnlinePlay } from "./DotsOnlinePlay";
-import { DotsOnlineRoomsList } from "./DotsOnlineRoomsList";
-import { Icon } from "@/FSD/shared/ui/icon/Icon";
-
-type DotsView =
-  | { kind: typeof VIEW_KIND.lobby }
-  | { kind: typeof VIEW_KIND.hotSeat }
-  | { kind: typeof VIEW_KIND.onlineList }
-  | { kind: typeof VIEW_KIND.onlineRoomDraft }
-  | { kind: typeof VIEW_KIND.onlineRoom; roomId: string }
-  | { kind: typeof VIEW_KIND.onlinePlay; roomId: string };
-
-type PendingJoin = Readonly<{
-  roomId: string;
-  asViewer: boolean;
-  needsPassword: boolean;
-}>;
+import { DotsOnlineRoomSetup } from "./DotsOnlineRoomSetup";
+import { DotsOnlineRoomsView } from "./DotsOnlineRoomsView";
+import { DotsOrchestratorLoading } from "./DotsOrchestratorLoading";
 
 /** Top-level dots-feature orchestrator: routes between lobby / hot-seat / online flows. */
 export function DotsGame(): ReactElement | null {
   const t = useTranslations("DotsGame");
   const queryClient = useQueryClient();
   const { identity, setDisplayName } = useOnlineIdentity();
-  const [view, setView] = useState<DotsView>({ kind: VIEW_KIND.lobby });
-  const [isNameModalOpen, setIsNameModalOpen] = useState(false);
-  const [pendingJoin, setPendingJoin] = useState<PendingJoin | null>(null);
-  const [joinError, setJoinError] = useState<string | null>(null);
-
-  const isNameRequired = !identity?.displayName;
+  const [view, setView] = useState<DotsView>({ kind: DotsViewKind.Lobby });
 
   const { mutate: createRoom, data: createdRoom, isPending: isCreating, reset: resetCreate } = useCreateRoomMutation();
   const {
@@ -82,143 +49,83 @@ export function DotsGame(): ReactElement | null {
 
   useEffect(() => {
     if (createdRoom) {
-      setView({ kind: VIEW_KIND.onlineRoom, roomId: createdRoom.id });
+      setView({ kind: DotsViewKind.OnlineRoom, roomId: createdRoom.id });
       resetCreate();
     }
   }, [createdRoom, resetCreate]);
 
   useEffect(() => {
     if (joinedRoom) {
-      routeJoinedRoom({ room: joinedRoom, setView, setPendingJoin });
+      routeJoinedRoom({ room: joinedRoom, setView });
       resetJoin();
     }
   }, [joinedRoom, resetJoin]);
 
   useEffect(() => {
-    if (joinMutationError) {
-      setJoinError(joinMutationError.message);
-      resetJoin();
-    }
-  }, [joinMutationError, resetJoin]);
-
-  useEffect(() => {
     if (didLeaveSucceed || didLeaveFail) {
-      setView({ kind: VIEW_KIND.onlineList });
+      setView({ kind: DotsViewKind.OnlineList });
       resetLeave();
     }
   }, [didLeaveSucceed, didLeaveFail, resetLeave]);
 
-  useEffect(() => {
-    if (view.kind === VIEW_KIND.onlineList && !identity?.displayName) {
-      setIsNameModalOpen(true);
-    }
-  }, [view.kind, identity?.displayName]);
-
   const portalRoot = useMemo(() => (typeof document !== "undefined" ? document.body : null), []);
 
-  if (view.kind === VIEW_KIND.lobby) {
+  if (view.kind === DotsViewKind.Lobby) {
     return (
-      <div className={styles.orchestrator}>
-        <DotsGameLobby
-          onPickOnline={() => pickOnline({ displayName: identity?.displayName, setIsNameModalOpen, setView })}
-          onPickHotSeat={() => setView({ kind: VIEW_KIND.hotSeat })}
-        />
-      </div>
+      <DotsMainMenu
+        onPickOnline={() => setView({ kind: DotsViewKind.OnlineList })}
+        onPickHotSeat={() => setView({ kind: DotsViewKind.HotSeat })}
+      />
     );
   }
-  if (view.kind === VIEW_KIND.hotSeat) {
-    return (
-      <div className={styles.orchestrator}>
-        <DotsHotSeatSetup onBack={() => setView({ kind: VIEW_KIND.lobby })} />
-      </div>
-    );
+  if (view.kind === DotsViewKind.HotSeat) {
+    return <DotsHotSeatSetup onBack={() => setView({ kind: DotsViewKind.Lobby })} />;
   }
-  if (view.kind === VIEW_KIND.onlineList) {
+  if (view.kind === DotsViewKind.OnlineList) {
     return (
-      <div className={styles.orchestrator}>
-        <DotsOnlineRoomsList
-          displayName={identity?.displayName ?? ""}
-          isJoining={isJoining}
-          joiningRoomId={joinVariables?.roomId ?? null}
-          onBack={() => setView({ kind: VIEW_KIND.lobby })}
-          onCreateRoom={() => requestCreateRoom({ displayName: identity?.displayName, setIsNameModalOpen, setView })}
-          onChangeName={() => setIsNameModalOpen(true)}
-          onOpenRoom={(roomId) =>
-            openRoom({
-              roomId,
-              identity,
-              queryClient,
-              joinRoom,
-              setIsNameModalOpen,
-              setPendingJoin,
-              setJoinError
-            })
-          }
-        />
-        {identity ? (
-          <DotsOnlineNamePromptModal
-            isOpen={isNameModalOpen}
-            initialName={identity.displayName ?? ""}
-            isRequired={isNameRequired}
-            onSubmit={(name) => submitName({ name, setDisplayName, setIsNameModalOpen })}
-            onClose={() => closeNameModal({ isRequired: isNameRequired, setIsNameModalOpen })}
-          />
-        ) : null}
-        {pendingJoin ? (
-          <DotsOnlineJoinPasswordModal
-            isOpen
-            errorText={joinError}
-            isSubmitting={isJoining}
-            onSubmit={(password) =>
-              submitJoinPassword({ password, pending: pendingJoin, identity, joinRoom, setJoinError })
-            }
-            onClose={() => closeJoinModal({ setPendingJoin, setJoinError })}
-          />
-        ) : null}
-      </div>
+      <DotsOnlineRoomsView
+        identity={identity}
+        isJoining={isJoining}
+        joiningRoomId={joinVariables?.roomId ?? null}
+        joinMutationError={joinMutationError}
+        queryClient={queryClient}
+        joinRoom={joinRoom}
+        setDisplayName={setDisplayName}
+        setView={setView}
+        onJoinErrorHandled={resetJoin}
+      />
     );
   }
   if (!identity?.displayName) {
     return null;
   }
-  if (view.kind === VIEW_KIND.onlineRoomDraft) {
+  if (view.kind === DotsViewKind.OnlineRoomDraft) {
     return (
-      <div className={styles.orchestrator}>
-        <DotsOnlineRoomSetup
-          roomId={null}
-          userId={identity.userId}
-          isCreating={isCreating}
-          onBack={() => setView({ kind: VIEW_KIND.onlineList })}
-          onGameStarted={(roomId) => setView({ kind: VIEW_KIND.onlinePlay, roomId })}
-          onLeftRoom={() => setView({ kind: VIEW_KIND.onlineList })}
-          onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
-        />
-      </div>
+      <DotsOnlineRoomSetup
+        roomId={null}
+        userId={identity.userId}
+        isCreating={isCreating}
+        onBack={() => setView({ kind: DotsViewKind.OnlineList })}
+        onGameStarted={(roomId) => setView({ kind: DotsViewKind.OnlinePlay, roomId })}
+        onLeftRoom={() => setView({ kind: DotsViewKind.OnlineList })}
+        onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
+      />
     );
   }
   if (!activeRoom) {
-    return (
-      <div className={styles.orchestrator}>
-        <div className={styles.loadingOverlay} role="status" aria-live="polite">
-          <Icon iconName="fetching" size="lg" title={t("connectingToRoom")} />
-          <span>{t("connectingToRoom")}</span>
-        </div>
-      </div>
-    );
+    return <DotsOrchestratorLoading label={t("connectingToRoom")} />;
   }
-  if (view.kind === VIEW_KIND.onlineRoom) {
+  if (view.kind === DotsViewKind.OnlineRoom) {
     return (
-      <div className={styles.orchestrator}>
-        <DotsOnlineRoomSetup
-          roomId={view.roomId}
-          userId={identity.userId}
-          isCreating={false}
-          onBack={() => setView({ kind: VIEW_KIND.onlineList })}
-          onGameStarted={(roomId) => setView({ kind: VIEW_KIND.onlinePlay, roomId })}
-          onLeftRoom={() => setView({ kind: VIEW_KIND.onlineList })}
-          onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
-        />
-      </div>
+      <DotsOnlineRoomSetup
+        roomId={view.roomId}
+        userId={identity.userId}
+        isCreating={false}
+        onBack={() => setView({ kind: DotsViewKind.OnlineList })}
+        onGameStarted={(roomId) => setView({ kind: DotsViewKind.OnlinePlay, roomId })}
+        onLeftRoom={() => setView({ kind: DotsViewKind.OnlineList })}
+        onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
+      />
     );
   }
   const play = (

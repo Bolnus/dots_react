@@ -17,7 +17,6 @@ import { DotsGameStartButton } from "./DotsGameStartButton";
 import styles from "./DotsOnlineRoomSetup.module.css";
 import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";
 import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
-import { Icon } from "@/FSD/shared/ui/icon/Icon";
 import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
 import { TextInput } from "@/FSD/shared/ui/input/TextInput";
 import { NumberInputType } from "@/FSD/shared/ui/input/types";
@@ -240,15 +239,8 @@ function DraftRoomSetupBody({
         onColsChange={(value) => setDraft({ ...draft, cols: value })}
       />
       <div className={styles.actions}>
-        <DotsGameStartButton onClick={onCreate} disabled={isCreating}>
-          {isCreating ? (
-            <span className={styles.actionContent}>
-              <Icon iconName="fetching" size="sm" />
-              <span>{t("createRoomAction")}</span>
-            </span>
-          ) : (
-            t("createRoomAction")
-          )}
+        <DotsGameStartButton onClick={onCreate} isLoading={isCreating}>
+          {t("createRoomAction")}
         </DotsGameStartButton>
       </div>
       <div className={styles.preview}>
@@ -369,6 +361,22 @@ type SubmitDraftArgs = Readonly<{
   onCreateRoom: (draft: CreateRoomDraft) => void;
 }>;
 
+/** Clears any prior start error and fires the start-game mutation for the room owner. */
+function requestStartGame({
+  roomId,
+  userId,
+  setStartError,
+  startGame
+}: Readonly<{
+  roomId: string;
+  userId: string;
+  setStartError: (value: string | null) => void;
+  startGame: (args: Readonly<{ roomId: string; request: Readonly<{ byUserId: string }> }>) => void;
+}>): void {
+  setStartError(null);
+  startGame({ roomId, request: { byUserId: userId } });
+}
+
 /** Builds the create-room payload from the draft form state and forwards it to the parent. */
 function submitDraft(args: SubmitDraftArgs): void {
   const effectiveConfig = buildEffectiveConfig({
@@ -445,10 +453,7 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
       userId={userId}
       defaults={defaults}
       onBack={onBack}
-      onStart={() => {
-        setStartError(null);
-        startGame({ roomId: room.id, request: { byUserId: userId } });
-      }}
+      onStart={() => requestStartGame({ roomId: room.id, userId, setStartError, startGame })}
       onPatch={(patch) => updateRoom({ roomId: room.id, request: { byUserId: userId, ...patch } })}
       onKick={(kickUserId) => updateRoom({ roomId: room.id, request: { byUserId: userId, kickUserId } })}
       onLeave={() => leaveRoom({ roomId: room.id, request: { userId } })}

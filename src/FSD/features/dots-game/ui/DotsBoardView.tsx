@@ -117,6 +117,7 @@ type DotsBoardChromeProps = Readonly<{
   onAccept: () => void;
   onUndo: () => void;
   onExit?: () => void;
+  exitDisabled?: boolean;
   onSurrender: () => void;
   hideAccept: boolean;
   hideSurrender: boolean;
@@ -134,6 +135,7 @@ function DotsBoardChrome({
   onAccept,
   onUndo,
   onExit,
+  exitDisabled = false,
   onSurrender,
   hideAccept,
   hideSurrender,
@@ -167,7 +169,11 @@ function DotsBoardChrome({
           </ToolbarButton>
         )}
         <ToolbarButton onClick={onUndo}>{t("undo")}</ToolbarButton>
-        {onExit ? <ToolbarButton onClick={onExit}>{t("exit")}</ToolbarButton> : null}
+        {onExit ? (
+          <ToolbarButton onClick={onExit} disabled={exitDisabled}>
+            {t("exit")}
+          </ToolbarButton>
+        ) : null}
         {hideSurrender ? null : (
           <ToolbarButton onClick={onSurrender} disabled={mode === "ended"}>
             {t("surrender")}
@@ -185,6 +191,8 @@ export type DotsBoardViewProps = Readonly<{
   game: UseDotsGameResult;
   /** When set, exit is shown in the toolbar (ignored in `preview` mode). */
   onExit?: () => void;
+  /** Disables the exit button (e.g. while the parent's leave mutation is pending). */
+  exitDisabled?: boolean;
   /** Empty board only: no toolbar, no input, for setup preview. */
   preview?: boolean;
   /** When true, board input + chrome buttons are disabled (used for viewer mode). */
@@ -203,6 +211,7 @@ export function DotsBoardView({
   playerLabels,
   game,
   onExit,
+  exitDisabled = false,
   preview = false,
   readOnly = false,
   extraStatus,
@@ -324,6 +333,7 @@ export function DotsBoardView({
           onAccept={accept}
           onUndo={undo}
           onExit={onExit}
+          exitDisabled={exitDisabled}
           onSurrender={surrender}
           hideAccept={hideAccept || readOnly}
           hideSurrender={hideSurrender || readOnly}

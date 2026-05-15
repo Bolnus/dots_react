@@ -26,6 +26,18 @@
   outline-offset: 2px;
 }
 
+.row:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.row:disabled:hover {
+  transform: none;
+  border-color: var(--border-subtle);
+  background: var(--bg-card);
+}
+
 .titleColumn {
   display: flex;
   flex-direction: column;

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { DotsGameBackLink } from "./DotsGameBackLink";
 import styles from "./DotsGameLobby.module.css";
+import { OptionButton } from "@/FSD/shared/ui/option-button/OptionButton";
 
 export type DotsGameLobbyProps = Readonly<{
   onPickOnline: () => void;
@@ -21,14 +22,8 @@ export function DotsGameLobby({ onPickOnline, onPickHotSeat }: DotsGameLobbyProp
       </div>
       <h2 className={styles.title}>{t("lobbyTitle")}</h2>
       <div className={styles.optionGrid}>
-        <button type="button" className={styles.optionButton} onClick={onPickOnline}>
-          <span className={styles.optionLabel}>{t("lobbyOnline")}</span>
-          <span className={styles.optionHint}>{t("lobbyOnlineHint")}</span>
-        </button>
-        <button type="button" className={styles.optionButton} onClick={onPickHotSeat}>
-          <span className={styles.optionLabel}>{t("lobbyHotSeat")}</span>
-          <span className={styles.optionHint}>{t("lobbyHotSeatHint")}</span>
-        </button>
+        <OptionButton label={t("lobbyOnline")} hint={t("lobbyOnlineHint")} onClick={onPickOnline} />
+        <OptionButton label={t("lobbyHotSeat")} hint={t("lobbyHotSeatHint")} onClick={onPickHotSeat} />
       </div>
     </div>
   );

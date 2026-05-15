@@ -9,6 +9,8 @@ import { Icon } from "@/FSD/shared/ui/icon/Icon";
 
 export type DotsRoomItemProps = Readonly<{
   room: DotsRoomSummary;
+  disabled?: boolean;
+  isJoiningThisRoom?: boolean;
   onOpen: (roomId: string) => void;
 }>;
 
@@ -42,7 +44,12 @@ function formatStatusLabel(args: StatusLabelArgs): string {
 }
 
 /** A single row in the online rooms list (clickable; opens the room when clicked). */
-export function DotsRoomItem({ room, onOpen }: DotsRoomItemProps): ReactElement {
+export function DotsRoomItem({
+  room,
+  disabled = false,
+  isJoiningThisRoom = false,
+  onOpen
+}: DotsRoomItemProps): ReactElement {
   const t = useTranslations("DotsGame");
   const statusLabel = formatStatusLabel({
     status: room.status,
@@ -52,7 +59,14 @@ export function DotsRoomItem({ room, onOpen }: DotsRoomItemProps): ReactElement 
   });
 
   return (
-    <button type="button" className={styles.row} onClick={() => onOpen(room.id)} title={t("openRoom")}>
+    <button
+      type="button"
+      className={styles.row}
+      onClick={() => onOpen(room.id)}
+      title={t("openRoom")}
+      disabled={disabled}
+      aria-busy={isJoiningThisRoom ? true : undefined}
+    >
       <div className={styles.titleColumn}>
         <span className={styles.name}>{room.name}</span>
         <span className={styles.meta}>{room.ownerName}</span>
@@ -62,6 +76,7 @@ export function DotsRoomItem({ room, onOpen }: DotsRoomItemProps): ReactElement 
       </span>
       <span className={`${styles.statusBadge} ${statusClassName(room.status)}`}>{statusLabel}</span>
       <span className={styles.icons}>
+        {isJoiningThisRoom ? <Icon iconName="fetching" size="sm" title={t("connectingToRoom")} /> : null}
         {room.isPrivate || room.hasPassword ? (
           <span className={styles.lockSlot}>
             <Icon iconName="lock" size="sm" title={t("private")} />

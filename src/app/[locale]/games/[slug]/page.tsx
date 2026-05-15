@@ -43,9 +43,7 @@ export async function generateMetadata({ params }: GamePageProps): Promise<Metad
 export default async function GamePage({ params }: GamePageProps): Promise<ReactElement> {
   const { locale, slug } = await params;
 
-  console.log("slug", slug);
   if (!isGameId(slug)) {
-    console.log("notFound");
     notFound();
   }
 

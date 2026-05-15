@@ -1,20 +1,25 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { UseMutationResult } from "@tanstack/react-query";
 
 import type { CreateRoomRequest, DotsRoomDetail } from "./dotsOnlineApiTypes";
 import { createRoom } from "./mockServer";
-import { DOTS_QUERY_KEYS } from "./queryKeys";
+import { syncRoomToCache } from "./queryKeys";
 
-/** Mutation hook that creates a new room and invalidates the rooms list. */
-export function useCreateRoomMutation(): UseMutationResult<DotsRoomDetail, Error, CreateRoomRequest> {
+type UseCreateRoomMutationResult = Readonly<{
+  mutate: (request: CreateRoomRequest) => void;
+  data: DotsRoomDetail | undefined;
+  error: Error | null;
+  reset: () => void;
+  isPending: boolean;
+}>;
+
+/** Mutation hook that creates a new room and syncs the resulting room into the query cache. */
+export function useCreateRoomMutation(): UseCreateRoomMutationResult {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (request: CreateRoomRequest) => createRoom(request),
-    onSuccess: (room) => {
-      queryClient.setQueryData(DOTS_QUERY_KEYS.room(room.id), room);
-      void queryClient.invalidateQueries({ queryKey: DOTS_QUERY_KEYS.roomsList });
-    }
+  const { mutate, data, error, reset, isPending } = useMutation<DotsRoomDetail, Error, CreateRoomRequest>({
+    mutationFn: (request) => createRoom(request),
+    onSuccess: (room) => syncRoomToCache(queryClient, room)
   });
+  return { mutate, data, error, reset, isPending };
 }

@@ -1,22 +1,27 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { UseMutationResult } from "@tanstack/react-query";
 
 import type { DotsRoomDetail, StartGameRequest } from "./dotsOnlineApiTypes";
 import { startGame } from "./mockServer";
-import { DOTS_QUERY_KEYS } from "./queryKeys";
+import { syncRoomToCache } from "./queryKeys";
 
 type StartGameArgs = Readonly<{ roomId: string; request: StartGameRequest }>;
 
+type UseStartGameMutationResult = Readonly<{
+  mutate: (args: StartGameArgs) => void;
+  data: DotsRoomDetail | undefined;
+  error: Error | null;
+  reset: () => void;
+  isPending: boolean;
+}>;
+
 /** Mutation hook that flips a room into `playing` and seeds its server game state. */
-export function useStartGameMutation(): UseMutationResult<DotsRoomDetail, Error, StartGameArgs> {
+export function useStartGameMutation(): UseStartGameMutationResult {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ roomId, request }: StartGameArgs) => startGame(roomId, request),
-    onSuccess: (room) => {
-      queryClient.setQueryData(DOTS_QUERY_KEYS.room(room.id), room);
-      void queryClient.invalidateQueries({ queryKey: DOTS_QUERY_KEYS.roomsList });
-    }
+  const { mutate, data, error, reset, isPending } = useMutation<DotsRoomDetail, Error, StartGameArgs>({
+    mutationFn: ({ roomId, request }) => startGame(roomId, request),
+    onSuccess: (room) => syncRoomToCache(queryClient, room)
   });
+  return { mutate, data, error, reset, isPending };
 }

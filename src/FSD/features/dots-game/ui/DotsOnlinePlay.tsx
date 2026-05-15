@@ -15,6 +15,8 @@ import { Icon } from "@/FSD/shared/ui/icon/Icon";
 export type DotsOnlinePlayProps = Readonly<{
   room: DotsRoomDetail;
   userId: string;
+  /** True while the parent's leave-room mutation is in flight; disables the exit button. */
+  isLeaving?: boolean;
   onExit: () => void;
 }>;
 
@@ -36,7 +38,12 @@ function computeStatusText(args: StatusTextArgs): string {
 }
 
 /** Online play wrapper: drives `DotsBoardView` with `useDotsOnlineGame` + viewer / status chrome. */
-export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnlinePlayProps): ReactElement {
+export function DotsOnlinePlay({
+  room: initialRoom,
+  userId,
+  isLeaving = false,
+  onExit
+}: DotsOnlinePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
   const live = useRoomLive(initialRoom.id);
   const room = live.room ?? initialRoom;
@@ -70,6 +77,7 @@ export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnline
         playerLabels={online.playerLabels}
         game={online}
         onExit={onExit}
+        exitDisabled={isLeaving}
         readOnly={isViewer}
         extraStatus={extraStatus}
       />

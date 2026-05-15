@@ -8,10 +8,10 @@ import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "../model/consts";
 import { defaultDotsConfig, isValidGridDimension } from "../model/logic";
 import type { DotsGameConfig, PlayerId } from "../model/types";
 
-import { DotsGameBackButton } from "./DotsGameBackButton";
 import { DotsGamePlay } from "./DotsGamePlay";
 import { DotsGameStartButton } from "./DotsGameStartButton";
 import styles from "./DotsHotSeatSetup.module.css";
+import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
 import { TextInput } from "@/FSD/shared/ui/input/TextInput";
@@ -105,7 +105,7 @@ export function DotsHotSeatSetup({ onBack }: DotsHotSeatSetupProps): ReactElemen
   return (
     <div className={styles.setup}>
       <div className={styles.setupBack}>
-        <DotsGameBackButton onClick={onBack} label={t("back")} />
+        <BackButton onClick={onBack} label={t("back")} />
       </div>
       <p className={styles.hint}>{t("rulesShort")}</p>
       <div className={styles.setupFields}>

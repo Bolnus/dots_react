@@ -12,11 +12,12 @@ import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "../model/consts";
 import { defaultDotsConfig, isValidGridDimension } from "../model/logic";
 import type { DotsGameConfig, PlayerId } from "../model/types";
 
-import { DotsGameBackButton } from "./DotsGameBackButton";
 import { DotsGamePlay } from "./DotsGamePlay";
 import { DotsGameStartButton } from "./DotsGameStartButton";
 import styles from "./DotsOnlineRoomSetup.module.css";
+import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";
 import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
+import { Icon } from "@/FSD/shared/ui/icon/Icon";
 import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
 import { TextInput } from "@/FSD/shared/ui/input/TextInput";
 import { NumberInputType } from "@/FSD/shared/ui/input/types";
@@ -33,6 +34,8 @@ export type DotsOnlineRoomSetupProps = Readonly<{
   /** When `null`, the form is in "draft" mode: clicking the primary button creates the room. */
   roomId: string | null;
   userId: string;
+  /** True while the parent's create-room mutation is in flight (draft mode only). */
+  isCreating?: boolean;
   onBack: () => void;
   onGameStarted: (roomId: string) => void;
   onLeftRoom: () => void;
@@ -81,6 +84,7 @@ type DraftRoomSetupBodyProps = Readonly<{
   draft: DraftFormState;
   setDraft: (next: DraftFormState) => void;
   defaults: DotsGameConfig;
+  isCreating: boolean;
   onBack: () => void;
   onCreate: () => void;
 }>;
@@ -202,7 +206,14 @@ function buildEffectiveConfig(args: EffectiveConfigArgs): DotsGameConfig {
 }
 
 /** Draft-mode renderer: local-only state, never touches the server until "Create room" is clicked. */
-function DraftRoomSetupBody({ draft, setDraft, defaults, onBack, onCreate }: DraftRoomSetupBodyProps): ReactElement {
+function DraftRoomSetupBody({
+  draft,
+  setDraft,
+  defaults,
+  isCreating,
+  onBack,
+  onCreate
+}: DraftRoomSetupBodyProps): ReactElement {
   const t = useTranslations("DotsGame");
   const effectiveConfig = useMemo(
     () => buildEffectiveConfig({ rows: draft.rows, cols: draft.cols, defaults }),
@@ -211,7 +222,7 @@ function DraftRoomSetupBody({ draft, setDraft, defaults, onBack, onCreate }: Dra
   return (
     <div className={styles.setup}>
       <div className={styles.topBar}>
-        <DotsGameBackButton onClick={onBack} label={t("back")} />
+        <BackButton onClick={onBack} label={t("back")} />
         <h2 className={styles.title}>{t("createRoomTitle")}</h2>
         <span aria-hidden style={{ width: 1 }} />
       </div>
@@ -224,12 +235,21 @@ function DraftRoomSetupBody({ draft, setDraft, defaults, onBack, onCreate }: Dra
       <GridSizeFields
         rows={draft.rows}
         cols={draft.cols}
-        disabled={false}
+        disabled={isCreating}
         onRowsChange={(value) => setDraft({ ...draft, rows: value })}
         onColsChange={(value) => setDraft({ ...draft, cols: value })}
       />
       <div className={styles.actions}>
-        <DotsGameStartButton onClick={onCreate}>{t("createRoomAction")}</DotsGameStartButton>
+        <DotsGameStartButton onClick={onCreate} disabled={isCreating}>
+          {isCreating ? (
+            <span className={styles.actionContent}>
+              <Icon iconName="fetching" size="sm" />
+              <span>{t("createRoomAction")}</span>
+            </span>
+          ) : (
+            t("createRoomAction")
+          )}
+        </DotsGameStartButton>
       </div>
       <div className={styles.preview}>
         <DotsGamePlay
@@ -284,7 +304,7 @@ function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
   return (
     <div className={styles.setup}>
       <div className={styles.topBar}>
-        <DotsGameBackButton onClick={props.onBack} label={t("back")} />
+        <BackButton onClick={props.onBack} label={t("back")} />
         <h2 className={styles.title}>{room.name}</h2>
         <button type="button" className={styles.changeNameButton} onClick={props.onLeave}>
           {t("leave")}
@@ -343,6 +363,26 @@ function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
   );
 }
 
+type SubmitDraftArgs = Readonly<{
+  draft: DraftFormState;
+  defaults: DotsGameConfig;
+  onCreateRoom: (draft: CreateRoomDraft) => void;
+}>;
+
+/** Builds the create-room payload from the draft form state and forwards it to the parent. */
+function submitDraft(args: SubmitDraftArgs): void {
+  const effectiveConfig = buildEffectiveConfig({
+    rows: args.draft.rows,
+    cols: args.draft.cols,
+    defaults: args.defaults
+  });
+  args.onCreateRoom({
+    name: args.draft.name,
+    config: effectiveConfig,
+    password: args.draft.password
+  });
+}
+
 /** Online configuration view: in draft mode shows "Create room"; in in-room mode shows roster + "Start game". */
 export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactElement {
   const defaults = useMemo(() => defaultDotsConfig(), []);
@@ -354,13 +394,13 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
   }));
   const [startError, setStartError] = useState<string | null>(null);
 
-  const { roomId, userId, onBack, onGameStarted, onLeftRoom, onCreateRoom } = props;
+  const { roomId, userId, isCreating = false, onBack, onGameStarted, onLeftRoom, onCreateRoom } = props;
   const live = useRoomLive(roomId);
   const { room } = live;
 
-  const updateMutation = useUpdateRoomMutation();
-  const startMutation = useStartGameMutation();
-  const leaveMutation = useLeaveRoomMutation();
+  const { mutate: updateRoom } = useUpdateRoomMutation();
+  const { mutate: startGame, error: startMutationError, reset: resetStart } = useStartGameMutation();
+  const { mutate: leaveRoom, isSuccess: didLeaveSucceed, reset: resetLeave } = useLeaveRoomMutation();
 
   useEffect(() => {
     if (roomId && room && room.status === "playing") {
@@ -368,21 +408,29 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
     }
   }, [roomId, room, onGameStarted]);
 
+  useEffect(() => {
+    if (startMutationError) {
+      setStartError(startMutationError.message);
+      resetStart();
+    }
+  }, [startMutationError, resetStart]);
+
+  useEffect(() => {
+    if (didLeaveSucceed) {
+      onLeftRoom();
+      resetLeave();
+    }
+  }, [didLeaveSucceed, onLeftRoom, resetLeave]);
+
   if (!roomId) {
     return (
       <DraftRoomSetupBody
         draft={draft}
         setDraft={setDraft}
         defaults={defaults}
+        isCreating={isCreating}
         onBack={onBack}
-        onCreate={() => {
-          const effectiveConfig = buildEffectiveConfig({ rows: draft.rows, cols: draft.cols, defaults });
-          onCreateRoom({
-            name: draft.name,
-            config: effectiveConfig,
-            password: draft.password
-          });
-        }}
+        onCreate={() => submitDraft({ draft, defaults, onCreateRoom })}
       />
     );
   }
@@ -399,26 +447,11 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
       onBack={onBack}
       onStart={() => {
         setStartError(null);
-        startMutation.mutate(
-          { roomId: room.id, request: { byUserId: userId } },
-          { onError: (error) => setStartError(error.message) }
-        );
+        startGame({ roomId: room.id, request: { byUserId: userId } });
       }}
-      onPatch={(patch) =>
-        updateMutation.mutate({
-          roomId: room.id,
-          request: { byUserId: userId, ...patch }
-        })
-      }
-      onKick={(kickUserId) =>
-        updateMutation.mutate({
-          roomId: room.id,
-          request: { byUserId: userId, kickUserId }
-        })
-      }
-      onLeave={() => {
-        leaveMutation.mutate({ roomId: room.id, request: { userId } }, { onSuccess: () => onLeftRoom() });
-      }}
+      onPatch={(patch) => updateRoom({ roomId: room.id, request: { byUserId: userId, ...patch } })}
+      onKick={(kickUserId) => updateRoom({ roomId: room.id, request: { byUserId: userId, kickUserId } })}
+      onLeave={() => leaveRoom({ roomId: room.id, request: { userId } })}
       startError={startError}
     />
   );

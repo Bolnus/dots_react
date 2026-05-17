@@ -84,7 +84,9 @@ type InRoomSetupBodyProps = Readonly<{
   defaults: DotsGameConfig;
   onBack: () => void;
   onStart: () => void;
-  onPatch: (patch: Readonly<{ config?: DotsGameConfig; isPrivate?: boolean; password?: string }>) => void;
+  onPatch: (
+    patch: Readonly<{ config?: Readonly<{ rows: number; cols: number }>; isPrivate?: boolean; password?: string }>
+  ) => void;
   onKick: (kickUserId: string) => void;
   onLeave: () => void;
   startError: string | null;

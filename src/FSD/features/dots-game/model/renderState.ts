@@ -1,11 +1,12 @@
 import type { DotsLocalState } from "./localState";
 import { currentServerPlacingPlayer } from "./serverReducer";
 import type { DotsServerGameState } from "./serverState";
-import type { CellState, GridPoint } from "./types";
+import { toClientGameConfig } from "./boardConfig";
+import type { DotsGameConfig, CellState, GridPoint } from "./types";
 
 /** Subset of `DotsGameState` consumed by `DotsGamePlay` rendering. */
 export type DotsRenderState = Readonly<{
-  config: DotsServerGameState["config"];
+  config: DotsGameConfig;
   cells: DotsServerGameState["cells"];
   scores: DotsServerGameState["scores"];
   mode: "play" | "drawPolygon" | "ended";
@@ -44,7 +45,7 @@ export function buildRenderState(server: DotsServerGameState, local: DotsLocalSt
     mode = "play";
   }
   return {
-    config: server.config,
+    config: toClientGameConfig(server.config),
     cells,
     scores: server.scores,
     mode,

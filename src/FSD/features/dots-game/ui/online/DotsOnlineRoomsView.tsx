@@ -25,7 +25,7 @@ export type DotsOnlineRoomsViewProps = Readonly<{
   joinMutationError: Error | null;
   queryClient: QueryClient;
   joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest }>) => void;
-  setDisplayName: (name: string) => void;
+  setDisplayName: (name: string) => Promise<void>;
   setView: (view: DotsOnlineView) => void;
   onBackToLobby: () => void;
   onJoinErrorHandled: () => void;

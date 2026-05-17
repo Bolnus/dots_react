@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { registerSession } from "../api/dotsApi";
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 
 export type DotsOnlineIdentity = Readonly<{
@@ -11,10 +12,11 @@ export type DotsOnlineIdentity = Readonly<{
 
 export type UseOnlineIdentityResult = Readonly<{
   identity: DotsOnlineIdentity | null;
-  setDisplayName: (name: string) => void;
+  setDisplayName: (name: string) => Promise<void>;
+  isRegistering: boolean;
 }>;
 
-/** Reads a string from `localStorage`, returning `null` for missing values or unavailable storage. */
+/** Reads a string from localStorage, or null when unavailable. */
 function readStored(key: LocalStorageKey): string | null {
   if (typeof window === "undefined") {
     return null;
@@ -26,7 +28,7 @@ function readStored(key: LocalStorageKey): string | null {
   }
 }
 
-/** Writes a string to `localStorage`, silently ignoring quota / private-mode errors. */
+/** Writes a string to localStorage, ignoring quota errors. */
 function writeStored(key: LocalStorageKey, value: string): void {
   if (typeof window === "undefined") {
     return;
@@ -34,57 +36,42 @@ function writeStored(key: LocalStorageKey, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    /* Quota / private mode: ignore */
+    /* ignore */
   }
 }
 
-/** Generates a stable, unique synthetic user id for this browser session. */
-function generateUserId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `u-${crypto.randomUUID()}`;
-  }
-  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
-    const bytes = new Uint8Array(8);
-    crypto.getRandomValues(bytes);
-    const hex = Array.from(bytes)
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-    return `u-${hex}`;
-  }
-  return `u-${Date.now().toString(36)}`;
-}
-
-/** Returns the existing client user id from storage, generating and persisting one when missing. */
-function ensureUserId(): string {
-  const existing = readStored(LocalStorageKey.DotsOnlineUserId);
-  if (existing && existing.trim()) {
-    return existing;
-  }
-  const next = generateUserId();
-  writeStored(LocalStorageKey.DotsOnlineUserId, next);
-  return next;
-}
-
-/** Hook: returns the persistent online identity for this browser (user id + optional display name). */
+/** Hook: server-backed online identity (token + user id + display name). */
 export function useOnlineIdentity(): UseOnlineIdentityResult {
   const [identity, setIdentity] = useState<DotsOnlineIdentity | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
-    const userId = ensureUserId();
+    const userId = readStored(LocalStorageKey.DotsOnlineUserId);
+    const token = readStored(LocalStorageKey.DotsOnlineSessionToken);
     const storedName = readStored(LocalStorageKey.DotsOnlinePlayerName);
-    setIdentity({ userId, displayName: storedName && storedName.trim() ? storedName : null });
+    if (userId && token && storedName?.trim()) {
+      setIdentity({ userId, displayName: storedName.trim() });
+    } else if (storedName?.trim()) {
+      setIdentity({ userId: userId ?? "", displayName: storedName.trim() });
+    }
   }, []);
 
-  const setDisplayName = useCallback((name: string): void => {
+  const setDisplayName = useCallback(async (name: string): Promise<void> => {
     const trimmed = name.trim();
-    writeStored(LocalStorageKey.DotsOnlinePlayerName, trimmed);
-    setIdentity((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      return { ...prev, displayName: trimmed || null };
-    });
+    if (!trimmed) {
+      return;
+    }
+    setIsRegistering(true);
+    try {
+      const result = await registerSession(trimmed);
+      writeStored(LocalStorageKey.DotsOnlineSessionToken, result.token);
+      writeStored(LocalStorageKey.DotsOnlineUserId, result.userId);
+      writeStored(LocalStorageKey.DotsOnlinePlayerName, result.displayName);
+      setIdentity({ userId: result.userId, displayName: result.displayName });
+    } finally {
+      setIsRegistering(false);
+    }
   }, []);
 
-  return { identity, setDisplayName };
+  return { identity, setDisplayName, isRegistering };
 }

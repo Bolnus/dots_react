@@ -59,6 +59,8 @@
     "enterYourName": "Choose a display name",
     "namePlaceholder": "Your name",
     "submitName": "Continue",
+    "errorTitle": "Error",
+    "errorOk": "OK",
     "roomStatusWaiting": "Waiting {filled}/{total}",
     "roomStatusPlaying": "Playing",
     "roomStatusFinished": "Finished",

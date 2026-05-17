@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { DotsRoomDetail, PatchRoomRequest } from "./dotsOnlineApiTypes";
-import { patchRoom } from "./mockServer";
+import { patchRoom } from "./dotsApi";
 import { syncRoomToCache } from "./queryKeys";
 
 type UpdateRoomArgs = Readonly<{ roomId: string; request: PatchRoomRequest }>;

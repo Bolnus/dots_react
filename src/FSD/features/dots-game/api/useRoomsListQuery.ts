@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { DotsRoomSummary } from "./dotsOnlineApiTypes";
-import { fetchRooms } from "./mockServer";
+import { fetchRooms } from "./dotsApi";
 import { DOTS_QUERY_KEYS } from "./queryKeys";
 
 type UseRoomsListQueryResult = Readonly<{

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { DotsRoomDetail } from "../../api/dotsOnlineApiTypes";
 import { useRoomLive } from "../../api/useRoomLive";
 import { useSendGameAction } from "../../api/useSendGameAction";
+import { toClientGameConfig } from "../../model/boardConfig";
 import { useDotsOnlineGame } from "../../model/useDotsOnlineGame";
 
 import { DotsBoardView } from "../play/DotsBoardView";
@@ -73,7 +74,7 @@ export function DotsOnlinePlay({
   return (
     <div className={styles.wrap}>
       <DotsBoardView
-        config={room.config}
+        config={toClientGameConfig(room.config)}
         playerLabels={online.playerLabels}
         game={online}
         onExit={onExit}

@@ -42,7 +42,7 @@ export function areNeighbourCells(a: GridPoint, b: GridPoint): boolean {
 }
 
 /** Creates a fresh grid with empty, unblocked cells. */
-export function createEmptyGrid(config: DotsGameConfig): CellState[][] {
+export function createEmptyGrid(config: Pick<DotsGameConfig, "rows" | "cols">): CellState[][] {
   return Array.from({ length: config.rows }, () =>
     Array.from({ length: config.cols }, () => ({ owner: null, blocked: false }))
   );

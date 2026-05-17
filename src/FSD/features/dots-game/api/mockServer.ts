@@ -17,7 +17,14 @@ import type { DotsLocalState } from "../model/localState";
 import { currentServerPlacingPlayer, reduceServer } from "../model/serverReducer";
 import { initialServerStateFromConfig } from "../model/serverState";
 import type { DotsServerGameState } from "../model/serverState";
+import { toClientGameConfig } from "../model/boardConfig";
+import type { DotsBoardConfig } from "./dotsOnlineApiTypes";
 import type { DotsGameConfig, GridPoint, PlayerId } from "../model/types";
+
+/** Strips UI-only fields from a mock room config for wire types. */
+function toWireBoardConfig(config: DotsGameConfig): DotsBoardConfig {
+  return { rows: config.rows, cols: config.cols };
+}
 
 /** Simulated latency for REST mock calls (ms). */
 const REST_LATENCY_MS = 80;
@@ -90,7 +97,7 @@ function toRoomDetail(room: RoomRecord): DotsRoomDetail {
     status: room.status,
     players: room.players.map((player) => ({ slot: player.slot, user: { ...player.user } })),
     viewers: room.viewers.map((user) => ({ ...user })),
-    config: room.config,
+    config: toWireBoardConfig(room.config),
     serverState: room.serverState,
     presence: room.presence,
     presenceBy: room.presenceBy,
@@ -107,7 +114,7 @@ function toRoomSummary(room: RoomRecord): DotsRoomSummary {
     ownerName: room.players.find((player) => player.user.userId === room.ownerUserId)?.user.displayName ?? "—",
     isPrivate: room.isPrivate,
     hasPassword: room.password !== null,
-    config: room.config,
+    config: toWireBoardConfig(room.config),
     status: room.status,
     playerCount: room.players.length,
     maxPlayers: MAX_PLAYERS,
@@ -370,7 +377,7 @@ export async function createRoom(request: CreateRoomRequest): Promise<DotsRoomDe
       }
     ],
     viewers: [],
-    config: request.config,
+    config: toClientGameConfig(request.config),
     serverState: null,
     presence: null,
     presenceBy: null,
@@ -396,7 +403,7 @@ export async function patchRoom(roomId: string, request: PatchRoomRequest): Prom
     throw new Error("Settings are locked once the game has started");
   }
   if (request.config !== undefined) {
-    room.config = request.config;
+    room.config = toClientGameConfig(request.config);
   }
   if (request.isPrivate !== undefined) {
     room.isPrivate = request.isPrivate;
@@ -472,7 +479,7 @@ export async function startGame(roomId: string, request: StartGameRequest): Prom
     throw new Error("Need 2 players to start");
   }
   room.status = "playing";
-  room.serverState = initialServerStateFromConfig(room.config);
+  room.serverState = initialServerStateFromConfig({ rows: room.config.rows, cols: room.config.cols });
   room.presence = null;
   room.presenceBy = null;
   broadcastRoomEvent(roomId, { type: "STATE_DELTA", room: toRoomDetail(room) });

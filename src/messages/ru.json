@@ -59,6 +59,8 @@
     "enterYourName": "Выберите отображаемое имя",
     "namePlaceholder": "Ваше имя",
     "submitName": "Продолжить",
+    "errorTitle": "Ошибка",
+    "errorOk": "OK",
     "roomStatusWaiting": "Ожидание {filled}/{total}",
     "roomStatusPlaying": "В игре",
     "roomStatusFinished": "Завершено",

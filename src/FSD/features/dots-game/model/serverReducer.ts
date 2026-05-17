@@ -113,13 +113,45 @@ function applySurrender(state: DotsServerGameState, by: PlayerId): DotsServerGam
   });
 }
 
+/** True when at least one intersection can still receive a dot. */
+function hasPlayableCell(cells: CellState[][]): boolean {
+  for (const row of cells) {
+    for (const cell of row) {
+      if (!cell.blocked && cell.owner === null) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** Ends the game when the board has no playable empty cells; winner by score (tie → null). */
+function maybeEndOnBoardFull(state: DotsServerGameState): DotsServerGameState {
+  if (state.mode !== "play" || hasPlayableCell(state.cells)) {
+    return state;
+  }
+  const { player0, player1 } = state.scores;
+  let winner: PlayerId | null = null;
+  if (player0 > player1) {
+    winner = "player0";
+  } else if (player1 > player0) {
+    winner = "player1";
+  }
+  return withHashAndVersion({
+    ...state,
+    mode: "ended",
+    winner,
+    surrenderedBy: null
+  });
+}
+
 /** Pure server-side reducer for authoritative dots state. */
 export function reduceServer(state: DotsServerGameState, action: DotsServerAction): DotsServerGameState {
   switch (action.type) {
     case "COMMIT_PLACEMENT":
-      return applyCommitPlacement(state, action.point, action.by);
+      return maybeEndOnBoardFull(applyCommitPlacement(state, action.point, action.by));
     case "COMMIT_CAPTURE":
-      return applyCommitCapture(state, action.ring, action.by);
+      return maybeEndOnBoardFull(applyCommitCapture(state, action.ring, action.by));
     case "SURRENDER":
       return applySurrender(state, action.by);
     default: {

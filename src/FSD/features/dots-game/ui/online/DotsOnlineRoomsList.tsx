@@ -98,7 +98,7 @@ export function DotsOnlineRoomsList({
       </div>
       <RoomsBody
         isLoading={isLoading}
-        rooms={rooms ?? []}
+        rooms={Array.isArray(rooms) ? rooms : []}
         isJoining={isJoining}
         joiningRoomId={joiningRoomId}
         onOpen={onOpenRoom}

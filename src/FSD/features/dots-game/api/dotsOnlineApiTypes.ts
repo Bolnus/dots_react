@@ -1,7 +1,13 @@
 import type { DotsLocalState } from "../model/localState";
 import type { DotsServerAction } from "../model/serverReducer";
 import type { DotsServerGameState } from "../model/serverState";
-import type { DotsGameConfig, PlayerId } from "../model/types";
+import type { PlayerId } from "../model/types";
+
+/** Board dimensions persisted and transmitted by the server (no UI cell size). */
+export type DotsBoardConfig = Readonly<{
+  rows: number;
+  cols: number;
+}>;
 
 /** Lifecycle status of a room exposed to clients. */
 export type DotsRoomStatus = "waiting" | "playing" | "finished";
@@ -23,7 +29,7 @@ export type DotsRoomSummary = Readonly<{
   ownerName: string;
   isPrivate: boolean;
   hasPassword: boolean;
-  config: DotsGameConfig;
+  config: DotsBoardConfig;
   status: DotsRoomStatus;
   playerCount: number;
   /** Maximum players for the dots game (always 2). */
@@ -42,7 +48,7 @@ export type DotsRoomDetail = Readonly<{
   status: DotsRoomStatus;
   players: readonly { slot: PlayerId; user: DotsOnlineUser }[];
   viewers: readonly DotsOnlineUser[];
-  config: DotsGameConfig;
+  config: DotsBoardConfig;
   /** Authoritative game state once the room has been started; `null` while waiting. */
   serverState: DotsServerGameState | null;
   /** Active player's in-flight UI state (broadcast verbatim; not part of the hash). */
@@ -57,7 +63,7 @@ export type CreateRoomRequest = Readonly<{
   name: string;
   ownerUserId: string;
   ownerName: string;
-  config: DotsGameConfig;
+  config: DotsBoardConfig;
   isPrivate: boolean;
   password?: string;
 }>;
@@ -65,7 +71,7 @@ export type CreateRoomRequest = Readonly<{
 /** Request body for owner-side patches (config / password / kick). */
 export type PatchRoomRequest = Readonly<{
   byUserId: string;
-  config?: DotsGameConfig;
+  config?: DotsBoardConfig;
   isPrivate?: boolean;
   password?: string;
   kickUserId?: string;

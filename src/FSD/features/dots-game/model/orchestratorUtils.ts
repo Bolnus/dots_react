@@ -37,11 +37,12 @@ export function submitName({
   setIsNameModalOpen
 }: Readonly<{
   name: string;
-  setDisplayName: (name: string) => void;
+  setDisplayName: (name: string) => Promise<void>;
   setIsNameModalOpen: (open: boolean) => void;
 }>): void {
-  setDisplayName(name);
-  setIsNameModalOpen(false);
+  void setDisplayName(name).then(() => {
+    setIsNameModalOpen(false);
+  });
 }
 
 /** Closes the name modal unless the user has not yet picked a name (the modal is required then). */
@@ -149,7 +150,7 @@ export function createRoomFromDraft({
     name: trimmedName || `${identity.displayName}'s room`,
     ownerUserId: identity.userId,
     ownerName: identity.displayName,
-    config: draft.config,
+    config: { rows: draft.config.rows, cols: draft.config.cols },
     isPrivate: trimmedPassword.length > 0,
     password: trimmedPassword
   });

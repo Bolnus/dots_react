@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { LeaveRoomRequest } from "./dotsOnlineApiTypes";
-import { leaveRoom } from "./mockServer";
+import { leaveRoom } from "./dotsApi";
 import { dropRoomFromCache } from "./queryKeys";
 
 type LeaveRoomArgs = Readonly<{ roomId: string; request: LeaveRoomRequest }>;
@@ -21,7 +21,7 @@ type UseLeaveRoomMutationResult = Readonly<{
 export function useLeaveRoomMutation(): UseLeaveRoomMutationResult {
   const queryClient = useQueryClient();
   const { mutate, error, reset, isPending, isSuccess, isError } = useMutation<void, Error, LeaveRoomArgs>({
-    mutationFn: ({ roomId, request }) => leaveRoom(roomId, request),
+    mutationFn: ({ roomId }) => leaveRoom(roomId),
     onSuccess: (_data, { roomId }) => dropRoomFromCache(queryClient, roomId)
   });
   return { mutate, error, reset, isPending, isSuccess, isError };

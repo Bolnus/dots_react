@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { DotsRoomDetail, StartGameRequest } from "./dotsOnlineApiTypes";
-import { startGame } from "./mockServer";
+import { startGame } from "./dotsApi";
 import { syncRoomToCache } from "./queryKeys";
 
 type StartGameArgs = Readonly<{ roomId: string; request: StartGameRequest }>;
@@ -20,7 +20,7 @@ type UseStartGameMutationResult = Readonly<{
 export function useStartGameMutation(): UseStartGameMutationResult {
   const queryClient = useQueryClient();
   const { mutate, data, error, reset, isPending } = useMutation<DotsRoomDetail, Error, StartGameArgs>({
-    mutationFn: ({ roomId, request }) => startGame(roomId, request),
+    mutationFn: ({ roomId }) => startGame(roomId),
     onSuccess: (room) => syncRoomToCache(queryClient, room)
   });
   return { mutate, data, error, reset, isPending };

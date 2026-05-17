@@ -49,7 +49,16 @@ const nextConfig: NextConfig = {
     dangerouslyAllowLocalIP: true
   },
   allowedDevOrigins: [DEV_HOST_MIKE_PC, "mike-laptop.local"],
-  staticPageGenerationTimeout: 120
+  staticPageGenerationTimeout: 120,
+  rewrites() {
+    const apiOrigin = process.env.DOTS_API_ORIGIN ?? "http://127.0.0.1:3030";
+    return [
+      {
+        source: "/dots/:path*",
+        destination: `${apiOrigin}/dots/:path*`
+      }
+    ];
+  }
 };
 
 export default withNextIntl(nextConfig);

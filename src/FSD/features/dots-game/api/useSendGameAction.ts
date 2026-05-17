@@ -3,7 +3,8 @@
 import { useCallback } from "react";
 
 import type { CommitActionRequest, CommitActionResult, EphemeralActionRequest } from "./dotsOnlineApiTypes";
-import { applyCommittedAction, applyEphemeralAction } from "./mockServer";
+import { applyCommittedAction } from "./dotsApi";
+import { sendDotsPresence } from "./dotsRealtime";
 
 export type UseSendGameActionResult = Readonly<{
   sendCommitted: (request: CommitActionRequest) => Promise<CommitActionResult>;
@@ -27,7 +28,7 @@ export function useSendGameAction(roomId: string | null): UseSendGameActionResul
             status: "finished",
             players: [],
             viewers: [],
-            config: { rows: 0, cols: 0, cellSizePx: 0 },
+            config: { rows: 0, cols: 0 },
             serverState: null,
             presence: null,
             presenceBy: null,
@@ -41,11 +42,12 @@ export function useSendGameAction(roomId: string | null): UseSendGameActionResul
   );
 
   const sendEphemeral = useCallback(
-    async (request: EphemeralActionRequest): Promise<void> => {
+    (request: EphemeralActionRequest): Promise<void> => {
       if (!roomId) {
-        return;
+        return Promise.resolve();
       }
-      await applyEphemeralAction(roomId, request);
+      sendDotsPresence(roomId, request.patch);
+      return Promise.resolve();
     },
     [roomId]
   );

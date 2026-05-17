@@ -1,5 +1,6 @@
 import { createEmptyGrid } from "./logic";
-import type { CellState, DotsGameConfig, FilledPolygon, PlayerId } from "./types";
+import type { DotsBoardConfig } from "../api/dotsOnlineApiTypes";
+import type { CellState, FilledPolygon, PlayerId } from "./types";
 import { fnv1a32Hex } from "@/FSD/shared/lib/hash/fnv1a";
 
 /** Authoritative server-side play mode (no client-only draw mode). */
@@ -7,7 +8,7 @@ export type DotsServerMode = "play" | "ended";
 
 /** Authoritative dots game state owned by the server (excludes any in-flight local UI). */
 export type DotsServerGameState = Readonly<{
-  config: DotsGameConfig;
+  config: DotsBoardConfig;
   cells: CellState[][];
   /** Number of committed dot placements (drives whose turn is next). */
   dotsPlacedCount: number;
@@ -32,7 +33,7 @@ export function canonicalizeServerState(state: Omit<DotsServerGameState, "hash">
     ring: poly.ring.map((p) => [p.r, p.c])
   }));
   const projection = {
-    config: state.config,
+    config: { rows: state.config.rows, cols: state.config.cols },
     cells: cellRows,
     dotsPlacedCount: state.dotsPlacedCount,
     scores: { player0: state.scores.player0, player1: state.scores.player1 },
@@ -51,7 +52,7 @@ export function computeServerStateHash(state: Omit<DotsServerGameState, "hash">)
 }
 
 /** Initial authoritative state for a new room game with the given board config. */
-export function initialServerStateFromConfig(config: DotsGameConfig): DotsServerGameState {
+export function initialServerStateFromConfig(config: DotsBoardConfig): DotsServerGameState {
   const base: Omit<DotsServerGameState, "hash"> = {
     config,
     cells: createEmptyGrid(config),

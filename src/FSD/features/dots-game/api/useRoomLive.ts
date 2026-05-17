@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import type { DotsRoomDetail, DotsRoomEvent } from "./dotsOnlineApiTypes";
-import { subscribeRoom } from "./mockServer";
+import { fetchRoom } from "./dotsApi";
+import { subscribeDotsRoom } from "./dotsRealtime";
 import { DOTS_QUERY_KEYS } from "./queryKeys";
 
 export type UseRoomLiveResult = Readonly<{
@@ -19,7 +20,7 @@ type RoomEventHandlerArgs = Readonly<{
   syncQueryCache: (room: DotsRoomDetail) => void;
 }>;
 
-/** Routes a live event to the snapshot state and the react-query cache (drops stale room ids). */
+/** Applies a realtime room event to local state and the query cache. */
 function onRoomEvent(event: DotsRoomEvent, args: RoomEventHandlerArgs): void {
   if (event.room.id !== args.expectedRoomId) {
     return;
@@ -48,20 +49,42 @@ export function useRoomLive(roomId: string | null): UseRoomLiveResult {
       setIsConnected(false);
       return undefined;
     }
+
+    const cached = queryClient.getQueryData<DotsRoomDetail>(DOTS_QUERY_KEYS.room(roomId));
+    setRoom(cached ?? null);
     setIsConnected(false);
-    setRoom(null);
+
+    let cancelled = false;
+    if (!cached) {
+      void queryClient
+        .fetchQuery({
+          queryKey: DOTS_QUERY_KEYS.room(roomId),
+          queryFn: () => fetchRoom(roomId)
+        })
+        .then((snapshot) => {
+          if (!cancelled) {
+            setRoom(snapshot);
+          }
+        })
+        .catch(() => {
+          /* HTTP errors surface via the global API error modal */
+        });
+    }
+
     const args: RoomEventHandlerArgs = {
       expectedRoomId: roomId,
       setRoom,
       setIsConnected,
       syncQueryCache
     };
-    const unsubscribe = subscribeRoom(roomId, (event) => onRoomEvent(event, args));
+    const unsubscribe = subscribeDotsRoom(roomId, (event) => onRoomEvent(event, args));
+
     return () => {
+      cancelled = true;
       unsubscribe();
       setIsConnected(false);
     };
-  }, [roomId, syncQueryCache]);
+  }, [roomId, queryClient, syncQueryCache]);
 
   return { room, isConnected };
 }

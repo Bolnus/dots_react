@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
+import { setDotsApiLocaleProvider } from "../../api/dotsHttpClient";
+import { useDotsApiErrors } from "../../api/useDotsApiErrors";
 import { useCreateRoomMutation } from "../../api/useCreateRoomMutation";
 import { useJoinRoomMutation } from "../../api/useJoinRoomMutation";
 import { useLeaveRoomMutation } from "../../api/useLeaveRoomMutation";
@@ -18,6 +20,7 @@ import { DotsOnlinePlay } from "./DotsOnlinePlay";
 import { DotsOnlineRoomSetup } from "./DotsOnlineRoomSetup";
 import { DotsOnlineRoomsView } from "./DotsOnlineRoomsView";
 import styles from "./DotsOnlineSetup.module.css";
+import { InfoModal } from "@/FSD/shared/ui/info-modal/InfoModal";
 
 export type DotsOnlineSetupProps = Readonly<{
   onBackToLobby: () => void;
@@ -26,9 +29,15 @@ export type DotsOnlineSetupProps = Readonly<{
 /** Online flow: rooms list, room setup, and live play. */
 export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactElement | null {
   const t = useTranslations("DotsGame");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const { identity, setDisplayName } = useOnlineIdentity();
+  const { errorMessage, clearError } = useDotsApiErrors();
   const [view, setView] = useState<DotsOnlineView>({ kind: DotsOnlineViewKind.List });
+
+  useEffect(() => {
+    setDotsApiLocaleProvider(() => locale);
+  }, [locale]);
 
   const { mutate: createRoom, data: createdRoom, isPending: isCreating, reset: resetCreate } = useCreateRoomMutation();
   const {
@@ -72,20 +81,33 @@ export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactE
 
   const portalRoot = useMemo(() => (typeof document !== "undefined" ? document.body : null), []);
 
+  const errorModal = (
+    <InfoModal
+      isOpen={errorMessage !== null}
+      title={t("errorTitle")}
+      message={errorMessage ?? ""}
+      buttonLabel={t("errorOk")}
+      onClose={clearError}
+    />
+  );
+
   if (view.kind === DotsOnlineViewKind.List) {
     return (
-      <DotsOnlineRoomsView
-        identity={identity}
-        isJoining={isJoining}
-        joiningRoomId={joinVariables?.roomId ?? null}
-        joinMutationError={joinMutationError}
-        queryClient={queryClient}
-        joinRoom={joinRoom}
-        setDisplayName={setDisplayName}
-        setView={setView}
-        onBackToLobby={onBackToLobby}
-        onJoinErrorHandled={resetJoin}
-      />
+      <>
+        {errorModal}
+        <DotsOnlineRoomsView
+          identity={identity}
+          isJoining={isJoining}
+          joiningRoomId={joinVariables?.roomId ?? null}
+          joinMutationError={joinMutationError}
+          queryClient={queryClient}
+          joinRoom={joinRoom}
+          setDisplayName={setDisplayName}
+          setView={setView}
+          onBackToLobby={onBackToLobby}
+          onJoinErrorHandled={resetJoin}
+        />
+      </>
     );
   }
   if (!identity?.displayName) {
@@ -93,15 +115,18 @@ export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactE
   }
   if (view.kind === DotsOnlineViewKind.RoomDraft) {
     return (
-      <DotsOnlineRoomSetup
-        roomId={null}
-        userId={identity.userId}
-        isCreating={isCreating}
-        onBack={() => setView({ kind: DotsOnlineViewKind.List })}
-        onGameStarted={(roomId) => setView({ kind: DotsOnlineViewKind.Play, roomId })}
-        onLeftRoom={() => setView({ kind: DotsOnlineViewKind.List })}
-        onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
-      />
+      <>
+        {errorModal}
+        <DotsOnlineRoomSetup
+          roomId={null}
+          userId={identity.userId}
+          isCreating={isCreating}
+          onBack={() => setView({ kind: DotsOnlineViewKind.List })}
+          onGameStarted={(roomId) => setView({ kind: DotsOnlineViewKind.Play, roomId })}
+          onLeftRoom={() => setView({ kind: DotsOnlineViewKind.List })}
+          onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
+        />
+      </>
     );
   }
   if (!activeRoom) {
@@ -109,15 +134,18 @@ export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactE
   }
   if (view.kind === DotsOnlineViewKind.Room) {
     return (
-      <DotsOnlineRoomSetup
-        roomId={view.roomId}
-        userId={identity.userId}
-        isCreating={false}
-        onBack={() => setView({ kind: DotsOnlineViewKind.List })}
-        onGameStarted={(roomId) => setView({ kind: DotsOnlineViewKind.Play, roomId })}
-        onLeftRoom={() => setView({ kind: DotsOnlineViewKind.List })}
-        onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
-      />
+      <>
+        {errorModal}
+        <DotsOnlineRoomSetup
+          roomId={view.roomId}
+          userId={identity.userId}
+          isCreating={false}
+          onBack={() => setView({ kind: DotsOnlineViewKind.List })}
+          onGameStarted={(roomId) => setView({ kind: DotsOnlineViewKind.Play, roomId })}
+          onLeftRoom={() => setView({ kind: DotsOnlineViewKind.List })}
+          onCreateRoom={(draft) => createRoomFromDraft({ draft, identity, createRoom })}
+        />
+      </>
     );
   }
   const play = (
@@ -128,5 +156,10 @@ export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactE
       onExit={() => exitGame({ view, identity, leaveRoom, setView })}
     />
   );
-  return portalRoot ? createPortal(<div className={styles.playPortalRoot}>{play}</div>, portalRoot) : play;
+  return (
+    <>
+      {errorModal}
+      {portalRoot ? createPortal(<div className={styles.playPortalRoot}>{play}</div>, portalRoot) : play}
+    </>
+  );
 }

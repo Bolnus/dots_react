@@ -12,6 +12,7 @@ import { buildRenderState } from "./renderState";
 import type { DotsRenderState } from "./renderState";
 import { currentServerPlacingPlayer, reduceServer } from "./serverReducer";
 import type { DotsServerGameState } from "./serverState";
+import { toClientGameConfig } from "./boardConfig";
 import type { DotsGameState, GridPoint, PlayerId } from "./types";
 import type { UseDotsGameResult } from "./useDotsGame";
 
@@ -75,7 +76,7 @@ export function useDotsOnlineGame(args: UseDotsOnlineGameArgs): UseDotsOnlineGam
   const renderState: DotsRenderState = useMemo(() => {
     if (!serverState) {
       return {
-        config: room.config,
+        config: toClientGameConfig(room.config),
         cells: [],
         scores: { player0: 0, player1: 0 },
         mode: "play",

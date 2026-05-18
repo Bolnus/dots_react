@@ -8,11 +8,11 @@ import type { DotsGameConfig, DotsGameState, GridPoint, PlayerId } from "./types
 export type UseDotsGameResult = Readonly<{
   state: DotsGameState;
   placeLmb: (point: GridPoint) => void;
-  placeRmb: (point: GridPoint) => void;
   polygonClick: (point: GridPoint) => void;
   accept: () => void;
   undo: () => void;
-  clear: () => void;
+  /** When omitted, the Clear toolbar button is hidden (e.g. online play). */
+  clear?: () => void;
   surrender: () => void;
   currentPlayer: PlayerId;
 }>;
@@ -23,10 +23,6 @@ export function useDotsGame(initialConfig: DotsGameConfig): UseDotsGameResult {
 
   const placeLmb = useCallback((point: GridPoint) => {
     dispatch({ type: "PLACE_LMB", point });
-  }, []);
-
-  const placeRmb = useCallback((point: GridPoint) => {
-    dispatch({ type: "PLACE_RMB", point });
   }, []);
 
   const polygonClick = useCallback((point: GridPoint) => {
@@ -52,7 +48,6 @@ export function useDotsGame(initialConfig: DotsGameConfig): UseDotsGameResult {
   return {
     state,
     placeLmb,
-    placeRmb,
     polygonClick,
     accept,
     undo,

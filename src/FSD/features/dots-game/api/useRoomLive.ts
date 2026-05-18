@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import type { DotsRoomDetail, DotsRoomEvent } from "./dotsOnlineApiTypes";
 import { fetchRoom } from "./dotsApi";
@@ -11,13 +11,15 @@ import { DOTS_QUERY_KEYS } from "./queryKeys";
 export type UseRoomLiveResult = Readonly<{
   room: DotsRoomDetail | null;
   isConnected: boolean;
+  /** Applies an authoritative room snapshot (e.g. after a rejected commit). */
+  applyRoomSnapshot: (snapshot: DotsRoomDetail) => void;
 }>;
 
 type RoomEventHandlerArgs = Readonly<{
   expectedRoomId: string;
   setRoom: (room: DotsRoomDetail) => void;
   setIsConnected: (value: boolean) => void;
-  syncQueryCache: (room: DotsRoomDetail) => void;
+  queryClient: QueryClient;
 }>;
 
 /** Applies a realtime room event to local state and the query cache. */
@@ -27,7 +29,7 @@ function onRoomEvent(event: DotsRoomEvent, args: RoomEventHandlerArgs): void {
   }
   args.setRoom(event.room);
   args.setIsConnected(true);
-  args.syncQueryCache(event.room);
+  args.queryClient.setQueryData(DOTS_QUERY_KEYS.room(event.room.id), event.room);
 }
 
 /** Subscribes to live updates for `roomId` and exposes the latest snapshot. */
@@ -36,11 +38,15 @@ export function useRoomLive(roomId: string | null): UseRoomLiveResult {
   const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
 
-  const syncQueryCache = useCallback(
-    (next: DotsRoomDetail): void => {
-      queryClient.setQueryData(DOTS_QUERY_KEYS.room(next.id), next);
+  const applyRoomSnapshot = useCallback(
+    (snapshot: DotsRoomDetail): void => {
+      if (!roomId || snapshot.id !== roomId) {
+        return;
+      }
+      setRoom(snapshot);
+      queryClient.setQueryData(DOTS_QUERY_KEYS.room(snapshot.id), snapshot);
     },
-    [queryClient]
+    [roomId, queryClient]
   );
 
   useEffect(() => {
@@ -75,7 +81,7 @@ export function useRoomLive(roomId: string | null): UseRoomLiveResult {
       expectedRoomId: roomId,
       setRoom,
       setIsConnected,
-      syncQueryCache
+      queryClient
     };
     const unsubscribe = subscribeDotsRoom(roomId, (event) => onRoomEvent(event, args));
 
@@ -84,7 +90,7 @@ export function useRoomLive(roomId: string | null): UseRoomLiveResult {
       unsubscribe();
       setIsConnected(false);
     };
-  }, [roomId, queryClient, syncQueryCache]);
+  }, [roomId, queryClient]);
 
-  return { room, isConnected };
+  return { room, isConnected, applyRoomSnapshot };
 }

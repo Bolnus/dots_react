@@ -81,18 +81,12 @@ export function handleBoardMouseDown(
 
 /** Runs a board action for a given client coordinate (mouse/touch). */
 export function handleBoardDown(args: BoardDownArgs): void {
-  const { clientX, clientY, boardEl, mode, cellSizePx, rows, cols, isRmb, placeLmb, placeRmb, polygonClick } = args;
+  const { clientX, clientY, boardEl, mode, cellSizePx, rows, cols, placeLmb, polygonClick } = args;
   if (mode === "ended") {
     return;
   }
   const p = hitTestGrid({ clientX, clientY, el: boardEl, cellSize: cellSizePx, rows, cols });
   if (!p) {
-    return;
-  }
-  if (isRmb) {
-    if (mode === "play") {
-      placeRmb(p);
-    }
     return;
   }
   if (mode === "drawPolygon") {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 
-import type { DotsRoomDetail } from "../api/dotsOnlineApiTypes";
+import type { CommitActionRequest, CommitActionResult, DotsRoomDetail } from "../api/dotsOnlineApiTypes";
 import type { UseSendGameActionResult } from "../api/useSendGameAction";
 import { INITIAL_LOCAL_STATE, isSameLocalState } from "./localState";
 import type { DotsLocalState } from "./localState";
@@ -18,10 +18,13 @@ import type { UseDotsGameResult } from "./useDotsGame";
 
 export type DotsOnlineRole = "player" | "viewer";
 
+export type CommitRejectedResult = Extract<CommitActionResult, { status: "rejected" }>;
+
 export type UseDotsOnlineGameArgs = Readonly<{
   room: DotsRoomDetail;
   userId: string;
   send: UseSendGameActionResult;
+  onCommitRejected: (result: CommitRejectedResult) => void;
 }>;
 
 export type UseDotsOnlineGameResult = Readonly<
@@ -53,9 +56,105 @@ function pickRenderLocal(isActing: boolean, ownLocal: DotsLocalState, presence: 
   return presence ?? INITIAL_LOCAL_STATE;
 }
 
+type OnlineCommitContext = Readonly<{
+  send: UseSendGameActionResult;
+  userId: string;
+  onCommitRejected: (result: CommitRejectedResult) => void;
+  setOwnLocal: Dispatch<SetStateAction<DotsLocalState>>;
+}>;
+
+type ApplyLocalContext = Readonly<{
+  serverState: DotsServerGameState | null | undefined;
+  isMyTurn: boolean;
+  ownLocal: DotsLocalState;
+  send: UseSendGameActionResult;
+  userId: string;
+  setOwnLocal: Dispatch<SetStateAction<DotsLocalState>>;
+}>;
+
+/** Sends a committed action and applies the HTTP result (HTTP failures use the global API modal). */
+async function submitCommit(ctx: OnlineCommitContext, request: CommitActionRequest): Promise<void> {
+  try {
+    const result = await ctx.send.sendCommitted(request);
+    if (result.status === "ok") {
+      ctx.setOwnLocal(INITIAL_LOCAL_STATE);
+      return;
+    }
+    ctx.onCommitRejected(result);
+  } catch {
+    /* HTTP errors surface via the axios interceptor */
+  }
+}
+
+/** Commits a dot placement to the server. */
+function performCommitPlacement(
+  ctx: OnlineCommitContext,
+  point: GridPoint,
+  by: PlayerId,
+  server: DotsServerGameState
+): void {
+  const predicted = reduceServer(server, { type: "COMMIT_PLACEMENT", point, by });
+  if (predicted === server) {
+    return;
+  }
+  void submitCommit(ctx, {
+    userId: ctx.userId,
+    action: { type: "COMMIT_PLACEMENT", point, by },
+    prevHash: server.hash,
+    expectedNextHash: predicted.hash
+  });
+}
+
+/** Commits a polygon capture to the server. */
+function performCommitCapture(
+  ctx: OnlineCommitContext,
+  ring: GridPoint[],
+  by: PlayerId,
+  server: DotsServerGameState
+): void {
+  const predicted = reduceServer(server, { type: "COMMIT_CAPTURE", ring, by });
+  if (predicted === server) {
+    return;
+  }
+  void submitCommit(ctx, {
+    userId: ctx.userId,
+    action: { type: "COMMIT_CAPTURE", ring, by },
+    prevHash: server.hash,
+    expectedNextHash: predicted.hash
+  });
+}
+
+/** Commits surrender to the server. */
+function performCommitSurrender(ctx: OnlineCommitContext, by: PlayerId, server: DotsServerGameState): void {
+  const predicted = reduceServer(server, { type: "SURRENDER", by });
+  if (predicted === server) {
+    return;
+  }
+  void submitCommit(ctx, {
+    userId: ctx.userId,
+    action: { type: "SURRENDER", by },
+    prevHash: server.hash,
+    expectedNextHash: predicted.hash
+  });
+}
+
+/** Applies a local UI action and broadcasts ephemeral presence when it changes state. */
+function performApplyLocalAction(ctx: ApplyLocalContext, action: DotsLocalAction): DotsLocalState | null {
+  if (!ctx.serverState || !ctx.isMyTurn) {
+    return null;
+  }
+  const next = reduceLocal(ctx.ownLocal, action, ctx.serverState);
+  if (isSameLocalState(next, ctx.ownLocal)) {
+    return next;
+  }
+  ctx.setOwnLocal(next);
+  void ctx.send.sendEphemeral({ userId: ctx.userId, patch: next });
+  return next;
+}
+
 /** Hook: drives an online dots game on top of authoritative server state + ephemeral presence. */
 export function useDotsOnlineGame(args: UseDotsOnlineGameArgs): UseDotsOnlineGameResult {
-  const { room, userId, send } = args;
+  const { room, userId, send, onCommitRejected } = args;
   const slot = findPlayerSlot(room, userId);
   const role: DotsOnlineRole = slot === null ? "viewer" : "player";
 
@@ -93,123 +192,44 @@ export function useDotsOnlineGame(args: UseDotsOnlineGameArgs): UseDotsOnlineGam
 
   const playerLabels = useMemo(() => buildPlayerLabels(room), [room]);
 
-  const sendEphemeralPatch = useCallback(
-    (patch: DotsLocalState): void => {
-      void send.sendEphemeral({ userId, patch });
-    },
-    [send, userId]
-  );
-
-  const commitPlacement = useCallback(
-    (point: GridPoint, by: PlayerId, server: DotsServerGameState): void => {
-      const predicted = reduceServer(server, { type: "COMMIT_PLACEMENT", point, by });
-      if (predicted === server) {
-        return;
-      }
-      void send
-        .sendCommitted({
-          userId,
-          action: { type: "COMMIT_PLACEMENT", point, by },
-          prevHash: server.hash,
-          expectedNextHash: predicted.hash
-        })
-        .then(() => {
-          setOwnLocal(INITIAL_LOCAL_STATE);
-        });
-    },
-    [send, userId]
-  );
-
-  const commitCapture = useCallback(
-    (ring: GridPoint[], by: PlayerId, server: DotsServerGameState): void => {
-      const predicted = reduceServer(server, { type: "COMMIT_CAPTURE", ring, by });
-      if (predicted === server) {
-        return;
-      }
-      void send
-        .sendCommitted({
-          userId,
-          action: { type: "COMMIT_CAPTURE", ring, by },
-          prevHash: server.hash,
-          expectedNextHash: predicted.hash
-        })
-        .then(() => {
-          setOwnLocal(INITIAL_LOCAL_STATE);
-        });
-    },
-    [send, userId]
-  );
-
-  const commitSurrender = useCallback(
-    (by: PlayerId, server: DotsServerGameState): void => {
-      const predicted = reduceServer(server, { type: "SURRENDER", by });
-      if (predicted === server) {
-        return;
-      }
-      void send.sendCommitted({
-        userId,
-        action: { type: "SURRENDER", by },
-        prevHash: server.hash,
-        expectedNextHash: predicted.hash
-      });
-    },
-    [send, userId]
-  );
-
-  const applyLocalAction = useCallback(
-    (action: DotsLocalAction): DotsLocalState | null => {
-      if (!serverState || !isMyTurn) {
-        return null;
-      }
-      const next = reduceLocal(ownLocal, action, serverState);
-      if (isSameLocalState(next, ownLocal)) {
-        return next;
-      }
-      setOwnLocal(next);
-      sendEphemeralPatch(next);
-      return next;
-    },
-    [serverState, isMyTurn, sendEphemeralPatch, ownLocal]
-  );
-
   const placeLmb = useCallback(
     (point: GridPoint): void => {
       if (!isMyTurn || !serverState || !slot) {
         return;
       }
+      const commitCtx: OnlineCommitContext = { send, userId, onCommitRejected, setOwnLocal };
+      const applyLocalCtx: ApplyLocalContext = { serverState, isMyTurn, ownLocal, send, userId, setOwnLocal };
       const pending = ownLocal.pendingDot;
       if (ownLocal.mode === "play" && pending !== null && pending.r === point.r && pending.c === point.c) {
-        commitPlacement(pending, slot, serverState);
+        performCommitPlacement(commitCtx, pending, slot, serverState);
         return;
       }
-      const next = applyLocalAction({ type: "PLACE_LMB", point });
+      const next = performApplyLocalAction(applyLocalCtx, { type: "PLACE_LMB", point });
       if (!next) {
         return;
       }
       if (next.mode === "drawPolygon" && isChainClosed(next)) {
-        commitCapture(next.chainPath, slot, serverState);
+        performCommitCapture(commitCtx, next.chainPath, slot, serverState);
       }
     },
-    [applyLocalAction, isMyTurn, serverState, slot, commitCapture, commitPlacement, ownLocal]
+    [isMyTurn, serverState, slot, ownLocal, send, userId, onCommitRejected]
   );
 
   const polygonClick = useCallback(
     (point: GridPoint): void => {
-      const next = applyLocalAction({ type: "POLYGON_CLICK", point });
+      const next = performApplyLocalAction(
+        { serverState, isMyTurn, ownLocal, send, userId, setOwnLocal },
+        { type: "POLYGON_CLICK", point }
+      );
       if (!next || !serverState || !slot) {
         return;
       }
       if (next.mode === "drawPolygon" && isChainClosed(next)) {
-        commitCapture(next.chainPath, slot, serverState);
+        performCommitCapture({ send, userId, onCommitRejected, setOwnLocal }, next.chainPath, slot, serverState);
       }
     },
-    [applyLocalAction, serverState, slot, commitCapture]
+    [isMyTurn, ownLocal, serverState, slot, send, userId, onCommitRejected]
   );
-
-  /** RMB is intentionally ignored to keep input platform-agnostic. */
-  const placeRmb = useCallback((): void => {
-    /* no-op */
-  }, []);
 
   const accept = useCallback((): void => {
     if (!isMyTurn || !serverState || !slot) {
@@ -219,26 +239,22 @@ export function useDotsOnlineGame(args: UseDotsOnlineGameArgs): UseDotsOnlineGam
     if (!pending || ownLocal.mode !== "play") {
       return;
     }
-    commitPlacement(pending, slot, serverState);
-  }, [isMyTurn, serverState, slot, commitPlacement, ownLocal]);
+    performCommitPlacement({ send, userId, onCommitRejected, setOwnLocal }, pending, slot, serverState);
+  }, [isMyTurn, serverState, slot, ownLocal, send, userId, onCommitRejected]);
 
   const undo = useCallback((): void => {
     if (!isMyTurn) {
       return;
     }
-    applyLocalAction({ type: "UNDO" });
-  }, [isMyTurn, applyLocalAction]);
+    performApplyLocalAction({ serverState, isMyTurn, ownLocal, send, userId, setOwnLocal }, { type: "UNDO" });
+  }, [isMyTurn, serverState, ownLocal, send, userId]);
 
   const surrender = useCallback((): void => {
     if (!slot || !serverState || serverState.mode !== "play") {
       return;
     }
-    commitSurrender(slot, serverState);
-  }, [slot, serverState, commitSurrender]);
-
-  const clear = useCallback((): void => {
-    /* Clearing committed state is not allowed online; this is a no-op for parity with the hot-seat hook. */
-  }, []);
+    performCommitSurrender({ send, userId, onCommitRejected, setOwnLocal }, slot, serverState);
+  }, [slot, serverState, send, userId, onCommitRejected]);
 
   const currentPlayer: PlayerId = serverState ? currentServerPlacingPlayer(serverState) : "player0";
 
@@ -263,11 +279,9 @@ export function useDotsOnlineGame(args: UseDotsOnlineGameArgs): UseDotsOnlineGam
   return {
     state: renderShim,
     placeLmb,
-    placeRmb,
     polygonClick,
     accept,
     undo,
-    clear,
     surrender,
     currentPlayer,
     role,

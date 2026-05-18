@@ -1,12 +1,15 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 
 import type { DotsRoomDetail } from "../../api/dotsOnlineApiTypes";
+import { dispatchDotsApiError } from "../../api/useDotsApiErrors";
 import { useRoomLive } from "../../api/useRoomLive";
 import { useSendGameAction } from "../../api/useSendGameAction";
 import { toClientGameConfig } from "../../model/boardConfig";
+import type { CommitRejectedResult } from "../../model/useDotsOnlineGame";
 import { useDotsOnlineGame } from "../../model/useDotsOnlineGame";
 
 import { DotsBoardView } from "../play/DotsBoardView";
@@ -46,10 +49,17 @@ export function DotsOnlinePlay({
   onExit
 }: DotsOnlinePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
-  const live = useRoomLive(initialRoom.id);
-  const room = live.room ?? initialRoom;
+  const { room: liveRoom, applyRoomSnapshot } = useRoomLive(initialRoom.id);
+  const room = liveRoom ?? initialRoom;
   const send = useSendGameAction(room.id);
-  const online = useDotsOnlineGame({ room, userId, send });
+  const onCommitRejected = useCallback(
+    (result: CommitRejectedResult): void => {
+      applyRoomSnapshot(result.snapshot);
+      dispatchDotsApiError(t("serverRejected"));
+    },
+    [applyRoomSnapshot, t]
+  );
+  const online = useDotsOnlineGame({ room, userId, send, onCommitRejected });
 
   const { role } = online;
   const isViewer = role === "viewer";

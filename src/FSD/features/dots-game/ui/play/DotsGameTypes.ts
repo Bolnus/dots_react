@@ -8,7 +8,6 @@ export type BoardPointerHandlers = Readonly<{
   rows: number;
   cols: number;
   placeLmb: (p: GridPoint) => void;
-  placeRmb: (p: GridPoint) => void;
   polygonClick: (p: GridPoint) => void;
 }>;
 
@@ -20,9 +19,7 @@ export type BoardDownArgs = Readonly<{
   cellSizePx: number;
   rows: number;
   cols: number;
-  isRmb: boolean;
   placeLmb: (p: GridPoint) => void;
-  placeRmb: (p: GridPoint) => void;
   polygonClick: (p: GridPoint) => void;
 }>;
 

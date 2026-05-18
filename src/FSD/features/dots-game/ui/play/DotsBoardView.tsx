@@ -116,6 +116,7 @@ type DotsBoardChromeProps = Readonly<{
   pendingDot: GridPoint | null;
   onAccept: () => void;
   onUndo: () => void;
+  onClear?: () => void;
   onExit?: () => void;
   exitDisabled?: boolean;
   onSurrender: () => void;
@@ -134,6 +135,7 @@ function DotsBoardChrome({
   pendingDot,
   onAccept,
   onUndo,
+  onClear,
   onExit,
   exitDisabled = false,
   onSurrender,
@@ -169,6 +171,7 @@ function DotsBoardChrome({
           </ToolbarButton>
         )}
         <ToolbarButton onClick={onUndo}>{t("undo")}</ToolbarButton>
+        {onClear ? <ToolbarButton onClick={onClear}>{t("clear")}</ToolbarButton> : null}
         {onExit ? (
           <ToolbarButton onClick={onExit} disabled={exitDisabled}>
             {t("exit")}
@@ -221,7 +224,7 @@ export function DotsBoardView({
   const t = useTranslations("DotsGame");
   const boardRef = useRef<HTMLDivElement | null>(null);
   const boardWrapRef = useRef<HTMLDivElement | null>(null);
-  const { state, placeLmb, placeRmb, polygonClick, accept, undo, surrender, currentPlayer } = game;
+  const { state, placeLmb, polygonClick, accept, undo, clear, surrender, currentPlayer } = game;
   const effectiveConfig = config ?? state.config;
   const { cellSizePx, rows, cols } = effectiveConfig;
   const { cells, scores, mode, chainPath, polygons, winner, surrenderedBy, pendingDot } = state;
@@ -262,9 +265,7 @@ export function DotsBoardView({
       cellSizePx,
       rows,
       cols,
-      isRmb: false,
       placeLmb,
-      placeRmb,
       polygonClick
     });
 
@@ -286,7 +287,7 @@ export function DotsBoardView({
       boardEl.removeEventListener("touchend", onTouchEnd);
       boardEl.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [cellSizePx, cols, isInteractive, placeLmb, placeRmb, polygonClick, rows, state.mode]);
+  }, [cellSizePx, cols, isInteractive, placeLmb, polygonClick, rows, state.mode]);
 
   const currentPlayerName = playerLabels[currentPlayer];
   const turnLabel = formatTurnLabel(t, mode, currentPlayerName);
@@ -332,6 +333,7 @@ export function DotsBoardView({
           pendingDot={pendingDot}
           onAccept={accept}
           onUndo={undo}
+          onClear={readOnly ? undefined : clear}
           onExit={onExit}
           exitDisabled={exitDisabled}
           onSurrender={surrender}
@@ -354,7 +356,6 @@ export function DotsBoardView({
                     rows,
                     cols,
                     placeLmb,
-                    placeRmb,
                     polygonClick
                   })
               : undefined

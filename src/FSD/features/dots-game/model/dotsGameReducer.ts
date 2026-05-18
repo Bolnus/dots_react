@@ -276,12 +276,6 @@ function handlePlaceLmb(state: DotsGameState, point: GridPoint): DotsGameState {
   return placePendingDot(state, point, player);
 }
 
-/** Places a dot and enters enclosure mode from that intersection (Qt RMB). */
-function handlePlaceRmb(state: DotsGameState): DotsGameState {
-  // RMB is intentionally ignored to keep input platform-agnostic.
-  return state;
-}
-
 /** Extends the chain or closes back on the start when neighbours and capture rules allow. */
 function handlePolygonClick(state: DotsGameState, point: GridPoint): DotsGameState {
   if (state.mode !== "drawPolygon" || !state.chainStart) {
@@ -350,8 +344,6 @@ export function reduceDotsGame(state: DotsGameState, action: DotsGameAction): Do
       return handleUndo(state);
     case "PLACE_LMB":
       return handlePlaceLmb(state, action.point);
-    case "PLACE_RMB":
-      return handlePlaceRmb(state);
     case "POLYGON_CLICK":
       return handlePolygonClick(state, action.point);
     default:

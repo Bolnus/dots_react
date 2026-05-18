@@ -69,5 +69,4 @@ export type DotsGameAction =
   | { type: "SURRENDER" }
   | { type: "ACCEPT" }
   | { type: "PLACE_LMB"; point: GridPoint }
-  | { type: "PLACE_RMB"; point: GridPoint }
   | { type: "POLYGON_CLICK"; point: GridPoint };

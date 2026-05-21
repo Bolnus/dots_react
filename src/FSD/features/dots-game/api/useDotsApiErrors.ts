@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { DOTS_API_ERROR_EVENT } from "./dotsApiConsts";
 import { extractDotsErrorMessage } from "./dotsHttpClient";
+import type { DotsApiErrorDetail } from "./dotsOnlineApiTypes";
 
-export const DOTS_API_ERROR_EVENT = "dots-api-error";
-
-export type DotsApiErrorDetail = Readonly<{ message: string }>;
+/** Updates error state from a global dots API error document event. */
+function onDotsApiErrorEvent(event: Event, setErrorMessage: (message: string) => void): void {
+  const { detail } = event as CustomEvent<DotsApiErrorDetail>;
+  if (detail?.message) {
+    setErrorMessage(detail.message);
+  }
+}
 
 /** Listens for axios/API failures surfaced via a document event. */
 export function useDotsApiErrors(): Readonly<{
@@ -17,12 +23,7 @@ export function useDotsApiErrors(): Readonly<{
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const onEvent = (event: Event): void => {
-      const { detail } = event as CustomEvent<DotsApiErrorDetail>;
-      if (detail?.message) {
-        setErrorMessage(detail.message);
-      }
-    };
+    const onEvent = (event: Event): void => onDotsApiErrorEvent(event, setErrorMessage);
     document.addEventListener(DOTS_API_ERROR_EVENT, onEvent);
     return () => {
       document.removeEventListener(DOTS_API_ERROR_EVENT, onEvent);

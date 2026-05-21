@@ -3,17 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
-import type { DotsRoomDetail, DotsRoomEvent } from "./dotsOnlineApiTypes";
+import type { DotsRoomDetail, DotsRoomEvent, UseRoomLiveResult } from "./dotsOnlineApiTypes";
 import { fetchRoom } from "./dotsApi";
 import { subscribeDotsRoom } from "./dotsRealtime";
 import { DOTS_QUERY_KEYS } from "./queryKeys";
-
-export type UseRoomLiveResult = Readonly<{
-  room: DotsRoomDetail | null;
-  isConnected: boolean;
-  /** Applies an authoritative room snapshot (e.g. after a rejected commit). */
-  applyRoomSnapshot: (snapshot: DotsRoomDetail) => void;
-}>;
 
 type RoomEventHandlerArgs = Readonly<{
   expectedRoomId: string;
@@ -24,12 +17,14 @@ type RoomEventHandlerArgs = Readonly<{
 
 /** Applies a realtime room event to local state and the query cache. */
 function onRoomEvent(event: DotsRoomEvent, args: RoomEventHandlerArgs): void {
-  if (event.room.id !== args.expectedRoomId) {
+  const { room } = event;
+  const { expectedRoomId, setRoom, setIsConnected, queryClient } = args;
+  if (room.id !== expectedRoomId) {
     return;
   }
-  args.setRoom(event.room);
-  args.setIsConnected(true);
-  args.queryClient.setQueryData(DOTS_QUERY_KEYS.room(event.room.id), event.room);
+  setRoom(room);
+  setIsConnected(true);
+  queryClient.setQueryData(DOTS_QUERY_KEYS.room(room.id), room);
 }
 
 /** Subscribes to live updates for `roomId` and exposes the latest snapshot. */

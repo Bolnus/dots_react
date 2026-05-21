@@ -124,3 +124,20 @@ export type DotsRoomEvent =
   | Readonly<{ type: "ROOM_STATE"; room: DotsRoomDetail }>
   | Readonly<{ type: "STATE_DELTA"; room: DotsRoomDetail }>
   | Readonly<{ type: "PRESENCE_DELTA"; room: DotsRoomDetail }>;
+
+/** Payload on the global dots API error document event. */
+export type DotsApiErrorDetail = Readonly<{ message: string }>;
+
+/** Result of `useSendGameAction` — committed and ephemeral action senders. */
+export type UseSendGameActionResult = Readonly<{
+  sendCommitted: (request: CommitActionRequest) => Promise<CommitActionResult>;
+  sendEphemeral: (request: EphemeralActionRequest) => Promise<void>;
+}>;
+
+/** Result of `useRoomLive` — live room snapshot and connection state. */
+export type UseRoomLiveResult = Readonly<{
+  room: DotsRoomDetail | null;
+  isConnected: boolean;
+  /** Applies an authoritative room snapshot (e.g. after a rejected commit). */
+  applyRoomSnapshot: (snapshot: DotsRoomDetail) => void;
+}>;

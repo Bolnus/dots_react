@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 
-import type { CommitActionRequest, CommitActionResult, DotsRoomDetail } from "../api/dotsOnlineApiTypes";
-import type { UseSendGameActionResult } from "../api/useSendGameAction";
+import type {
+  CommitActionRequest,
+  CommitActionResult,
+  DotsRoomDetail,
+  UseSendGameActionResult
+} from "../api/dotsOnlineApiTypes";
 import { INITIAL_LOCAL_STATE, isSameLocalState } from "./localState";
 import type { DotsLocalState } from "./localState";
 import { isChainClosed, reduceLocal } from "./localReducer";

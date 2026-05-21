@@ -2,6 +2,9 @@ import axios, { type AxiosError, type AxiosInstance } from "axios";
 
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 
+import { DOTS_API_ERROR_EVENT } from "./dotsApiConsts";
+import type { DotsApiErrorDetail } from "./dotsOnlineApiTypes";
+
 export type DotsApiErrorBody = Readonly<{
   code?: string;
   messageLocal?: string;
@@ -55,7 +58,7 @@ export function createDotsHttpClient(): AxiosInstance {
     (error) => {
       const message = extractDotsErrorMessage(error);
       if (message && typeof document !== "undefined") {
-        document.dispatchEvent(new CustomEvent("dots-api-error", { detail: { message } }));
+        document.dispatchEvent(new CustomEvent<DotsApiErrorDetail>(DOTS_API_ERROR_EVENT, { detail: { message } }));
       }
       return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }

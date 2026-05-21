@@ -2,14 +2,14 @@
 
 import { useCallback } from "react";
 
-import type { CommitActionRequest, CommitActionResult, EphemeralActionRequest } from "./dotsOnlineApiTypes";
+import type {
+  CommitActionRequest,
+  CommitActionResult,
+  EphemeralActionRequest,
+  UseSendGameActionResult
+} from "./dotsOnlineApiTypes";
 import { applyCommittedAction } from "./dotsApi";
 import { sendDotsPresence } from "./dotsRealtime";
-
-export type UseSendGameActionResult = Readonly<{
-  sendCommitted: (request: CommitActionRequest) => Promise<CommitActionResult>;
-  sendEphemeral: (request: EphemeralActionRequest) => Promise<void>;
-}>;
 
 /** Returns the two action senders for a given room (checksum-validated committed + free-form ephemeral). */
 export function useSendGameAction(roomId: string | null): UseSendGameActionResult {

@@ -51,6 +51,31 @@ function subscribeAllRooms(): void {
   }
 }
 
+/** Authenticates the WebSocket and re-subscribes to all active rooms. */
+function onSocketOpen(token: string): void {
+  sendJson({ type: "AUTH", token });
+  subscribeAllRooms();
+}
+
+/** Dispatches a parsed room event to all listeners for that room. */
+function onSocketMessage(event: MessageEvent): void {
+  try {
+    const parsed = JSON.parse(String(event.data)) as DotsRoomEvent;
+    if (!parsed.room?.id) {
+      return;
+    }
+    const listeners = roomListeners.get(parsed.room.id);
+    if (!listeners) {
+      return;
+    }
+    for (const listener of listeners) {
+      listener(parsed);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Ensures a WebSocket is connected and authenticated for the current token. */
 function ensureSocket(): WebSocket | null {
   const token = readToken();
@@ -64,27 +89,8 @@ function ensureSocket(): WebSocket | null {
   connectToken = token;
   const ws = new WebSocket(wsBaseUrl());
   socket = ws;
-  ws.addEventListener("open", () => {
-    sendJson({ type: "AUTH", token });
-    subscribeAllRooms();
-  });
-  ws.addEventListener("message", (event) => {
-    try {
-      const parsed = JSON.parse(String(event.data)) as DotsRoomEvent;
-      if (!parsed.room?.id) {
-        return;
-      }
-      const listeners = roomListeners.get(parsed.room.id);
-      if (!listeners) {
-        return;
-      }
-      for (const listener of listeners) {
-        listener(parsed);
-      }
-    } catch {
-      /* ignore */
-    }
-  });
+  ws.addEventListener("open", () => onSocketOpen(token));
+  ws.addEventListener("message", onSocketMessage);
   return ws;
 }
 

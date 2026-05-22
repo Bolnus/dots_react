@@ -17,7 +17,7 @@ import { useOnlineIdentity } from "../../model/useOnlineIdentity";
 import { DotsOrchestratorLoading } from "../lobby/DotsOrchestratorLoading";
 
 import { DotsOnlinePlay } from "./DotsOnlinePlay";
-import { DotsOnlineRoomSetup } from "./DotsOnlineRoomSetup";
+import { DotsOnlineRoomSetup } from "./DotsOnlineRoomSetup/DotsOnlineRoomSetup";
 import { DotsOnlineRoomsView } from "./DotsOnlineRoomsView";
 import styles from "./DotsOnlineSetup.module.css";
 import { InfoModal } from "@/FSD/shared/ui/info-modal/InfoModal";

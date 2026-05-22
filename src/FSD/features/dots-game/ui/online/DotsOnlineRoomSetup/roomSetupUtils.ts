@@ -1,0 +1,86 @@
+import type { useTranslations } from "next-intl";
+
+import type { DotsRoomDetail } from "../../../api/dotsOnlineApiTypes";
+import { isValidGridDimension } from "../../../model/logic";
+import type { DotsGameConfig, PlayerId } from "../../../model/types";
+import type { RosterUser } from "../../roster/RosterPanel";
+
+import type { CreateRoomDraft, DraftFormState } from "./types";
+
+export const PLAYER_SLOTS = 2;
+
+type EffectiveConfigArgs = Readonly<{
+  rows: number | undefined;
+  cols: number | undefined;
+  defaults: DotsGameConfig;
+}>;
+
+/** Falls back to defaults when inputs are out of range; produces a preview-friendly config. */
+export function buildEffectiveConfig(args: EffectiveConfigArgs): DotsGameConfig {
+  return {
+    rows: isValidGridDimension(args.rows) ? args.rows : args.defaults.rows,
+    cols: isValidGridDimension(args.cols) ? args.cols : args.defaults.cols,
+    cellSizePx: args.defaults.cellSizePx
+  };
+}
+
+/** Builds the labels record from the live room (falls back to defaults). */
+export function buildPlayerLabels(
+  room: DotsRoomDetail,
+  t: ReturnType<typeof useTranslations>
+): Readonly<Record<PlayerId, string>> {
+  return {
+    player0: room.players.find((player) => player.slot === "player0")?.user.displayName ?? t("player0"),
+    player1: room.players.find((player) => player.slot === "player1")?.user.displayName ?? t("player1")
+  };
+}
+
+/** Sorts roster users so the player0 slot lands first; keeps original order otherwise. */
+export function sortedPlayerUsers(room: DotsRoomDetail): RosterUser[] {
+  const sorted = room.players.slice().sort((left, right) => {
+    if (left.slot === right.slot) {
+      return 0;
+    }
+    if (left.slot === "player0") {
+      return -1;
+    }
+    return 1;
+  });
+  return sorted.map((player) => player.user);
+}
+
+/** Clears any prior start error and fires the start-game mutation for the room owner. */
+export function requestStartGame({
+  roomId,
+  userId,
+  setStartError,
+  startGame
+}: Readonly<{
+  roomId: string;
+  userId: string;
+  setStartError: (value: string | null) => void;
+  startGame: (args: Readonly<{ roomId: string; request: Readonly<{ byUserId: string }> }>) => void;
+}>): void {
+  setStartError(null);
+  startGame({ roomId, request: { byUserId: userId } });
+}
+
+type SubmitDraftArgs = Readonly<{
+  draft: DraftFormState;
+  defaults: DotsGameConfig;
+  onCreateRoom: (draft: CreateRoomDraft) => void;
+}>;
+
+/** Builds the create-room payload from the draft form state and forwards it to the parent. */
+export function submitDraft(args: SubmitDraftArgs): void {
+  const effectiveConfig = buildEffectiveConfig({
+    rows: args.draft.rows,
+    cols: args.draft.cols,
+    defaults: args.defaults
+  });
+  args.onCreateRoom({
+    name: args.draft.name,
+    config: effectiveConfig,
+    password: args.draft.password
+  });
+}

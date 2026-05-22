@@ -1,0 +1,7 @@
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 4px;
+  padding-bottom: 24px;
+}

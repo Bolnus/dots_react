@@ -10,7 +10,7 @@ import type {
   LeaveRoomRequest
 } from "../api/dotsOnlineApiTypes";
 import { DOTS_QUERY_KEYS } from "../api/queryKeys";
-import type { CreateRoomDraft } from "../ui/online/DotsOnlineRoomSetup";
+import type { CreateRoomDraft } from "../ui/online/DotsOnlineRoomSetup/types";
 import type { DotsOnlineIdentity } from "./useOnlineIdentity";
 import { DotsOnlineViewKind, type DotsOnlineView, type PendingJoin } from "./orchestratorTypes";
 

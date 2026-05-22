@@ -82,16 +82,14 @@ export function DotsOnlinePlay({
   );
 
   return (
-    <div className={styles.wrap}>
-      <DotsBoardView
-        config={toClientGameConfig(room.config)}
-        playerLabels={online.playerLabels}
-        game={online}
-        onExit={onExit}
-        exitDisabled={isLeaving}
-        readOnly={isViewer}
-        extraStatus={extraStatus}
-      />
-    </div>
+    <DotsBoardView
+      config={toClientGameConfig(room.config)}
+      playerLabels={online.playerLabels}
+      game={online}
+      onExit={onExit}
+      exitDisabled={isLeaving}
+      readOnly={isViewer}
+      extraStatus={extraStatus}
+    />
   );
 }

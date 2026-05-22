@@ -21,6 +21,13 @@ export type DotsOnlineUser = Readonly<{
   displayName: string;
 }>;
 
+/** Response from `POST /sessions/register`. */
+export type RegisterSessionResult = Readonly<{
+  userId: string;
+  displayName: string;
+  token: string;
+}>;
+
 /** Snapshot of a single room shown in the rooms list. */
 export type DotsRoomSummary = Readonly<{
   id: string;

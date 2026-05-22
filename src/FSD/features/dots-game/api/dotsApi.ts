@@ -5,20 +5,35 @@ import type {
   DotsRoomDetail,
   DotsRoomSummary,
   JoinRoomRequest,
-  PatchRoomRequest
+  PatchRoomRequest,
+  RegisterSessionResult
 } from "./dotsOnlineApiTypes";
-import { dotsHttp } from "./dotsHttpClient";
+import { dotsHttp, withSilentDotsError } from "./dotsHttpClient";
 
-export type RegisterSessionResult = Readonly<{
-  userId: string;
-  displayName: string;
-  token: string;
+type RegisterSessionOptions = Readonly<{
+  silentError?: boolean;
 }>;
-
 /** Registers a display name and returns a session token. */
-export async function registerSession(displayName: string): Promise<RegisterSessionResult> {
-  const { data } = await dotsHttp.post<RegisterSessionResult>("/sessions/register", { displayName });
+export async function registerSession(
+  displayName: string,
+  options: RegisterSessionOptions = {}
+): Promise<RegisterSessionResult> {
+  const { data } = await dotsHttp.post<RegisterSessionResult>(
+    "/sessions/register",
+    { displayName },
+    withSilentDotsError(options.silentError === true)
+  );
   return data;
+}
+
+/** Returns whether the stored bearer token is still valid. */
+export async function validateSession(): Promise<boolean> {
+  try {
+    await dotsHttp.post("/sessions/heartbeat", undefined, withSilentDotsError(true));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Returns all room summaries. */

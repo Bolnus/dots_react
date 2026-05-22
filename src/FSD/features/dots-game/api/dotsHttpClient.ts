@@ -1,32 +1,16 @@
 import axios, { type AxiosError, type AxiosInstance } from "axios";
 
-import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
-
 import { DOTS_API_ERROR_EVENT } from "./dotsApiConsts";
+import type { DotsApiErrorBody, DotsHttpRequestConfig } from "./dotsHttpClientTypes";
 import type { DotsApiErrorDetail } from "./dotsOnlineApiTypes";
-
-export type DotsApiErrorBody = Readonly<{
-  code?: string;
-  messageLocal?: string;
-}>;
+import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
+import { readStoredString } from "@/FSD/shared/lib/local-storage/localStorage";
 
 let localeProvider: (() => string) | null = null;
 
 /** Registers a hook-safe locale supplier (call from a client component). */
 export function setDotsApiLocaleProvider(provider: () => string): void {
   localeProvider = provider;
-}
-
-/** Reads the dots session bearer token from storage. */
-function readToken(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  try {
-    return localStorage.getItem(LocalStorageKey.DotsOnlineSessionToken);
-  } catch {
-    return null;
-  }
 }
 
 /** Extracts a localized API error message from an axios failure. */
@@ -38,6 +22,28 @@ export function extractDotsErrorMessage(error: unknown): string | null {
   return axiosError.response?.data?.messageLocal ?? null;
 }
 
+/** Extracts a dots API error code from an axios failure. */
+export function extractDotsErrorCode(error: unknown): string | null {
+  if (!axios.isAxiosError(error)) {
+    return null;
+  }
+  const axiosError = error as AxiosError<DotsApiErrorBody>;
+  return axiosError.response?.data?.code ?? null;
+}
+
+/** Builds axios config that skips the global error modal when set. */
+export function withSilentDotsError(silent: boolean): Readonly<{ dotsSilentError?: boolean }> {
+  if (!silent) {
+    return {};
+  }
+  return { dotsSilentError: true };
+}
+
+/** Returns true when the request opted out of global error dispatch. */
+function isSilentDotsRequest(config: DotsHttpRequestConfig | undefined): boolean {
+  return config?.dotsSilentError === true;
+}
+
 /** Creates an axios client with auth, locale, and error dispatch interceptors. */
 export function createDotsHttpClient(): AxiosInstance {
   const baseURL = process.env.NEXT_PUBLIC_DOTS_API_BASE ?? "/dots";
@@ -46,7 +52,7 @@ export function createDotsHttpClient(): AxiosInstance {
   client.interceptors.request.use((config) => {
     const locale = localeProvider?.() ?? "en";
     config.headers.set("Accept-Language", locale);
-    const token = readToken();
+    const token = readStoredString(LocalStorageKey.DotsOnlineSessionToken);
     if (token) {
       config.headers.set("Authorization", `Bearer ${token}`);
     }
@@ -56,8 +62,10 @@ export function createDotsHttpClient(): AxiosInstance {
   client.interceptors.response.use(
     (response) => response,
     (error) => {
+      const axiosError = axios.isAxiosError(error) ? error : null;
       const message = extractDotsErrorMessage(error);
-      if (message && typeof document !== "undefined") {
+      const silent = isSilentDotsRequest(axiosError?.config as DotsHttpRequestConfig | undefined);
+      if (message && !silent && typeof document !== "undefined") {
         document.dispatchEvent(new CustomEvent<DotsApiErrorDetail>(DOTS_API_ERROR_EVENT, { detail: { message } }));
       }
       return Promise.reject(error instanceof Error ? error : new Error(String(error)));

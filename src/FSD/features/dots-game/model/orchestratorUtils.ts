@@ -11,7 +11,7 @@ import type {
 } from "../api/dotsOnlineApiTypes";
 import { DOTS_QUERY_KEYS } from "../api/queryKeys";
 import type { CreateRoomDraft } from "../ui/online/DotsOnlineRoomSetup/types";
-import type { DotsOnlineIdentity } from "./useOnlineIdentity";
+import type { DotsOnlineIdentity } from "./onlineIdentityTypes";
 import { DotsOnlineViewKind, type DotsOnlineView, type PendingJoin } from "./orchestratorTypes";
 
 /** Looks up a room summary from the cached rooms list (no network round-trip). */
@@ -30,8 +30,8 @@ export function pickActiveRoomId(view: DotsOnlineView): string | null {
   return null;
 }
 
-/** Persists the entered name and closes the name modal. */
-export function submitName({
+/** Persists the entered name and closes the name modal on success. */
+export async function submitName({
   name,
   setDisplayName,
   setIsNameModalOpen
@@ -39,21 +39,31 @@ export function submitName({
   name: string;
   setDisplayName: (name: string) => Promise<void>;
   setIsNameModalOpen: (open: boolean) => void;
-}>): void {
-  void setDisplayName(name).then(() => {
+}>): Promise<string | null> {
+  try {
+    await setDisplayName(name);
     setIsNameModalOpen(false);
-  });
+    return null;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return null;
+  }
 }
 
-/** Closes the name modal unless the user has not yet picked a name (the modal is required then). */
+/** Closes the name modal or returns to the lobby when entry is required. */
 export function closeNameModal({
   isRequired,
-  setIsNameModalOpen
+  setIsNameModalOpen,
+  onBackToLobby
 }: Readonly<{
   isRequired: boolean;
   setIsNameModalOpen: (open: boolean) => void;
+  onBackToLobby: () => void;
 }>): void {
   if (isRequired) {
+    onBackToLobby();
     return;
   }
   setIsNameModalOpen(false);

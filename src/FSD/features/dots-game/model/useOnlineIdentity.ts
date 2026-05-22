@@ -2,58 +2,97 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { registerSession } from "../api/dotsApi";
+import { registerSession, validateSession } from "../api/dotsApi";
+import { extractDotsErrorCode, extractDotsErrorMessage } from "../api/dotsHttpClient";
+import type { DotsOnlineIdentity, IdentityPhase, UseOnlineIdentityResult } from "./onlineIdentityTypes";
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
+import { readStoredString, removeStoredString, writeStoredString } from "@/FSD/shared/lib/local-storage/localStorage";
 
-export type DotsOnlineIdentity = Readonly<{
-  userId: string;
-  displayName: string | null;
-}>;
+/** Persists a successful registration result to localStorage and identity state. */
+function applyRegistrationResult(
+  result: Readonly<{ userId: string; displayName: string; token: string }>,
+  setIdentity: (identity: DotsOnlineIdentity | null) => void,
+  setPhase: (phase: IdentityPhase) => void
+): void {
+  writeStoredString(LocalStorageKey.DotsOnlineSessionToken, result.token);
+  writeStoredString(LocalStorageKey.DotsOnlineUserId, result.userId);
+  writeStoredString(LocalStorageKey.DotsOnlinePlayerName, result.displayName);
+  setIdentity({ userId: result.userId, displayName: result.displayName });
+  setPhase("authenticated");
+}
 
-export type UseOnlineIdentityResult = Readonly<{
-  identity: DotsOnlineIdentity | null;
-  setDisplayName: (name: string) => Promise<void>;
-  isRegistering: boolean;
-}>;
-
-/** Reads a string from localStorage, or null when unavailable. */
-function readStored(key: LocalStorageKey): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
+/** Attempts to reclaim the saved display name and returns whether authentication succeeded. */
+async function tryRegisterStoredName(
+  storedName: string,
+  setIdentity: (identity: DotsOnlineIdentity | null) => void,
+  setPhase: (phase: IdentityPhase) => void
+): Promise<boolean> {
   try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
+    const result = await registerSession(storedName, { silentError: true });
+    applyRegistrationResult(result, setIdentity, setPhase);
+    return true;
+  } catch (error: unknown) {
+    if (extractDotsErrorCode(error) === "dotsActiveRoomBlocked") {
+      removeStoredString(LocalStorageKey.DotsOnlineSessionToken);
+      removeStoredString(LocalStorageKey.DotsOnlineUserId);
+      removeStoredString(LocalStorageKey.DotsOnlinePlayerName);
+      setIdentity(null);
+      setPhase("needs_name");
+      return false;
+    }
+    throw error;
   }
 }
 
-/** Writes a string to localStorage, ignoring quota errors. */
-function writeStored(key: LocalStorageKey, value: string): void {
-  if (typeof window === "undefined") {
+/** Resolves online identity from localStorage and server session endpoints. */
+async function resolveIdentity(
+  setIdentity: (identity: DotsOnlineIdentity | null) => void,
+  setPhase: (phase: IdentityPhase) => void,
+  setStoredDisplayName: (name: string | null) => void
+): Promise<void> {
+  const userId = readStoredString(LocalStorageKey.DotsOnlineUserId);
+  const token = readStoredString(LocalStorageKey.DotsOnlineSessionToken);
+  const storedName = readStoredString(LocalStorageKey.DotsOnlinePlayerName)?.trim() ?? null;
+
+  if (!storedName) {
+    setStoredDisplayName(null);
+    setIdentity(null);
+    setPhase("needs_name");
     return;
   }
+
+  setStoredDisplayName(storedName);
+  setPhase("resolving");
+
+  if (token) {
+    const isValid = await validateSession();
+    if (isValid && userId) {
+      setIdentity({ userId, displayName: storedName });
+      setPhase("authenticated");
+      return;
+    }
+  }
+
   try {
-    localStorage.setItem(key, value);
+    const registered = await tryRegisterStoredName(storedName, setIdentity, setPhase);
+    if (!registered) {
+      setStoredDisplayName(null);
+    }
   } catch {
-    /* ignore */
+    setIdentity(null);
+    setPhase("needs_name");
   }
 }
 
 /** Hook: server-backed online identity (token + user id + display name). */
 export function useOnlineIdentity(): UseOnlineIdentityResult {
   const [identity, setIdentity] = useState<DotsOnlineIdentity | null>(null);
+  const [phase, setPhase] = useState<IdentityPhase>("resolving");
+  const [storedDisplayName, setStoredDisplayName] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
-    const userId = readStored(LocalStorageKey.DotsOnlineUserId);
-    const token = readStored(LocalStorageKey.DotsOnlineSessionToken);
-    const storedName = readStored(LocalStorageKey.DotsOnlinePlayerName);
-    if (userId && token && storedName?.trim()) {
-      setIdentity({ userId, displayName: storedName.trim() });
-    } else if (storedName?.trim()) {
-      setIdentity({ userId: userId ?? "", displayName: storedName.trim() });
-    }
+    void resolveIdentity(setIdentity, setPhase, setStoredDisplayName);
   }, []);
 
   const setDisplayName = useCallback(async (name: string): Promise<void> => {
@@ -64,14 +103,18 @@ export function useOnlineIdentity(): UseOnlineIdentityResult {
     setIsRegistering(true);
     try {
       const result = await registerSession(trimmed);
-      writeStored(LocalStorageKey.DotsOnlineSessionToken, result.token);
-      writeStored(LocalStorageKey.DotsOnlineUserId, result.userId);
-      writeStored(LocalStorageKey.DotsOnlinePlayerName, result.displayName);
-      setIdentity({ userId: result.userId, displayName: result.displayName });
+      applyRegistrationResult(result, setIdentity, setPhase);
+      setStoredDisplayName(result.displayName);
+    } catch (error: unknown) {
+      const message = extractDotsErrorMessage(error);
+      if (message) {
+        throw new Error(message);
+      }
+      throw error;
     } finally {
       setIsRegistering(false);
     }
   }, []);
 
-  return { identity, setDisplayName, isRegistering };
+  return { identity, phase, storedDisplayName, setDisplayName, isRegistering };
 }

@@ -1,6 +1,7 @@
 import type { DotsLocalState } from "../model/localState";
 import type { DotsRoomEvent } from "./dotsOnlineApiTypes";
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
+import { readStoredString } from "@/FSD/shared/lib/local-storage/localStorage";
 
 type RoomListener = (event: DotsRoomEvent) => void;
 
@@ -26,15 +27,6 @@ function wsBaseUrl(): string {
   }
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${protocol}//${window.location.host}/dots/ws`;
-}
-
-/** Reads the session token used for WebSocket authentication. */
-function readToken(): string | null {
-  try {
-    return localStorage.getItem(LocalStorageKey.DotsOnlineSessionToken);
-  } catch {
-    return null;
-  }
 }
 
 /** Sends a JSON payload on the open WebSocket when connected. */
@@ -78,7 +70,7 @@ function onSocketMessage(event: MessageEvent): void {
 
 /** Ensures a WebSocket is connected and authenticated for the current token. */
 function ensureSocket(): WebSocket | null {
-  const token = readToken();
+  const token = readStoredString(LocalStorageKey.DotsOnlineSessionToken);
   if (!token || typeof window === "undefined") {
     return null;
   }

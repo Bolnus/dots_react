@@ -5,7 +5,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
 import type { JoinRoomRequest } from "../../api/dotsOnlineApiTypes";
-import type { DotsOnlineIdentity } from "../../model/useOnlineIdentity";
+import type { DotsOnlineIdentity, IdentityPhase } from "../../model/onlineIdentityTypes";
 import {
   closeJoinModal,
   closeNameModal,
@@ -18,8 +18,32 @@ import type { DotsOnlineView, PendingJoin } from "../../model/orchestratorTypes"
 import { DotsOnlineRoomsList } from "./DotsOnlineRoomsList";
 import { PromptModal } from "@/FSD/shared/ui/prompt-modal/PromptModal";
 
+type HandleNameSubmitArgs = Readonly<{
+  name: string;
+  setDisplayName: (name: string) => Promise<void>;
+  setIsNameModalOpen: (open: boolean) => void;
+  setNameError: (error: string | null) => void;
+}>;
+
+/** Submits the name modal value and updates inline error state on failure. */
+async function handleNameSubmit({
+  name,
+  setDisplayName,
+  setIsNameModalOpen,
+  setNameError
+}: HandleNameSubmitArgs): Promise<void> {
+  setNameError(null);
+  const errorMessage = await submitName({ name, setDisplayName, setIsNameModalOpen });
+  if (errorMessage) {
+    setNameError(errorMessage);
+  }
+}
+
 export type DotsOnlineRoomsViewProps = Readonly<{
   identity: DotsOnlineIdentity | null;
+  phase: IdentityPhase;
+  storedDisplayName: string | null;
+  isRegistering: boolean;
   isJoining: boolean;
   joiningRoomId: string | null;
   joinMutationError: Error | null;
@@ -34,6 +58,9 @@ export type DotsOnlineRoomsViewProps = Readonly<{
 /** Online rooms list with name/join modals; owns list-only UI state. */
 export function DotsOnlineRoomsView({
   identity,
+  phase,
+  storedDisplayName,
+  isRegistering,
   isJoining,
   joiningRoomId,
   joinMutationError,
@@ -48,14 +75,12 @@ export function DotsOnlineRoomsView({
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [pendingJoin, setPendingJoin] = useState<PendingJoin | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
 
-  const isNameRequired = !identity?.displayName;
-
-  useEffect(() => {
-    if (!identity?.displayName) {
-      setIsNameModalOpen(true);
-    }
-  }, [identity?.displayName]);
+  const isNameRequired = phase === "resolving" || phase === "needs_name";
+  const showNameModal = isNameRequired || isNameModalOpen;
+  const isResolving = phase === "resolving";
+  const isListDisabled = isJoining || isResolving;
 
   useEffect(() => {
     if (joinMutationError) {
@@ -67,8 +92,8 @@ export function DotsOnlineRoomsView({
   return (
     <>
       <DotsOnlineRoomsList
-        displayName={identity?.displayName ?? ""}
-        isJoining={isJoining}
+        displayName={identity?.displayName ?? storedDisplayName ?? ""}
+        isJoining={isListDisabled}
         joiningRoomId={joiningRoomId}
         onBack={onBackToLobby}
         onCreateRoom={() => requestCreateRoom({ displayName: identity?.displayName, setIsNameModalOpen, setView })}
@@ -85,21 +110,21 @@ export function DotsOnlineRoomsView({
           })
         }
       />
-      {identity ? (
-        <PromptModal
-          isOpen={isNameModalOpen}
-          title={t("enterYourName")}
-          fieldLabel={t("namePlaceholder")}
-          submitLabel={t("submitName")}
-          placeholder={t("namePlaceholder")}
-          initialValue={identity.displayName ?? ""}
-          isClearable
-          isDismissable={!isNameRequired}
-          requireNonEmpty
-          onSubmit={(name) => submitName({ name, setDisplayName, setIsNameModalOpen })}
-          onClose={() => closeNameModal({ isRequired: isNameRequired, setIsNameModalOpen })}
-        />
-      ) : null}
+      <PromptModal
+        isOpen={showNameModal}
+        title={t("enterYourName")}
+        fieldLabel={t("namePlaceholder")}
+        submitLabel={t("submitName")}
+        placeholder={t("namePlaceholder")}
+        initialValue={identity?.displayName ?? storedDisplayName ?? ""}
+        isClearable
+        isDismissable
+        requireNonEmpty
+        isSubmitting={isResolving || isRegistering}
+        errorText={nameError}
+        onSubmit={(name) => void handleNameSubmit({ name, setDisplayName, setIsNameModalOpen, setNameError })}
+        onClose={() => closeNameModal({ isRequired: isNameRequired, setIsNameModalOpen, onBackToLobby })}
+      />
       {pendingJoin ? (
         <PromptModal
           isOpen

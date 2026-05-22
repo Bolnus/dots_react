@@ -31,7 +31,7 @@ export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactE
   const t = useTranslations("DotsGame");
   const locale = useLocale();
   const queryClient = useQueryClient();
-  const { identity, setDisplayName } = useOnlineIdentity();
+  const { identity, phase, storedDisplayName, setDisplayName, isRegistering } = useOnlineIdentity();
   const { errorMessage, clearError } = useDotsApiErrors();
   const [view, setView] = useState<DotsOnlineView>({ kind: DotsOnlineViewKind.List });
 
@@ -97,6 +97,9 @@ export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactE
         {errorModal}
         <DotsOnlineRoomsView
           identity={identity}
+          phase={phase}
+          storedDisplayName={storedDisplayName}
+          isRegistering={isRegistering}
           isJoining={isJoining}
           joiningRoomId={joinVariables?.roomId ?? null}
           joinMutationError={joinMutationError}
@@ -110,7 +113,7 @@ export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactE
       </>
     );
   }
-  if (!identity?.displayName) {
+  if (phase !== "authenticated" || !identity) {
     return null;
   }
   if (view.kind === DotsOnlineViewKind.RoomDraft) {

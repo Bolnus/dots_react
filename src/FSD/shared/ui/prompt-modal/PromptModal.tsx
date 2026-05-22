@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactElement, type SubmitEventHandler } from 
 
 import { Modal } from "@/FSD/shared/ui/modal/Modal";
 import { TextInput } from "@/FSD/shared/ui/input/TextInput";
+import { Icon } from "@/FSD/shared/ui/icon/Icon";
 
 import styles from "./PromptModal.module.css";
 
@@ -79,8 +80,8 @@ export function PromptModal({
         </label>
         {errorText ? <p className={styles.error}>{errorText}</p> : null}
         <div className={styles.actions}>
-          <button type="submit" className={styles.submitButton} disabled={isSubmitDisabled}>
-            {submitLabel}
+          <button type="submit" className={styles.submitButton} disabled={isSubmitDisabled} aria-busy={isSubmitting}>
+            {isSubmitting ? <Icon iconName="fetching" title={submitLabel} /> : submitLabel}
           </button>
         </div>
       </form>

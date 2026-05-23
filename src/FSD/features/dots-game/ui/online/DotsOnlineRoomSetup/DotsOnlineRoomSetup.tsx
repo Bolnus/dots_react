@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 
+import type { LeaveRoomRequest } from "../../../api/dotsOnlineApiTypes";
 import { useLeaveRoomMutation } from "../../../api/useLeaveRoomMutation";
 import { useRoomLive } from "../../../api/useRoomLive";
 import { useStartGameMutation } from "../../../api/useStartGameMutation";
@@ -13,6 +14,30 @@ import styles from "./DotsOnlineRoomSetup.module.css";
 import { InRoomSetupBody } from "./InRoomSetupBody";
 import { requestStartGame, submitDraft } from "./roomSetupUtils";
 import type { DotsOnlineRoomSetupProps, DraftFormState } from "./types";
+
+/** Leaves the waiting room or navigates back when still in draft mode. */
+function requestLeave({
+  isLeaving,
+  roomId,
+  userId,
+  onBack,
+  leaveRoom
+}: Readonly<{
+  isLeaving: boolean;
+  roomId: string | null;
+  userId: string;
+  onBack?: () => void;
+  leaveRoom: (args: Readonly<{ roomId: string; request: LeaveRoomRequest }>) => void;
+}>): void {
+  if (isLeaving) {
+    return;
+  }
+  if (!roomId) {
+    onBack?.();
+    return;
+  }
+  leaveRoom({ roomId, request: { userId } });
+}
 
 /** Online configuration view: in draft mode shows "Create room"; in in-room mode shows roster + "Start game". */
 export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactElement {
@@ -37,17 +62,6 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
     isSuccess: didLeaveSucceed,
     reset: resetLeave
   } = useLeaveRoomMutation();
-
-  const requestLeave = useCallback((): void => {
-    if (isLeaving) {
-      return;
-    }
-    if (!roomId) {
-      onBack?.();
-      return;
-    }
-    leaveRoom({ roomId, request: { userId } });
-  }, [isLeaving, leaveRoom, onBack, roomId, userId]);
 
   useEffect(() => {
     if (roomId && room && room.status === "playing") {
@@ -92,11 +106,10 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
       userId={userId}
       defaults={defaults}
       isLeaving={isLeaving}
-      onBack={requestLeave}
+      onBack={() => requestLeave({ isLeaving, roomId, userId, onBack, leaveRoom })}
       onStart={() => requestStartGame({ roomId: room.id, userId, setStartError, startGame })}
       onPatch={(patch) => updateRoom({ roomId: room.id, request: { byUserId: userId, ...patch } })}
       onKick={(kickUserId) => updateRoom({ roomId: room.id, request: { byUserId: userId, kickUserId } })}
-      onLeave={requestLeave}
       startError={startError}
     />
   );

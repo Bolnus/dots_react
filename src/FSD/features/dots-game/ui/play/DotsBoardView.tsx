@@ -1,6 +1,6 @@
 "use client";
 
-import type { MouseEvent as ReactMouseEvent, ReactElement, ReactNode } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactElement, ReactNode, RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 
@@ -28,6 +28,96 @@ import { ExpandableEllipsisText } from "@/FSD/shared/ui/expandable-ellipsis-text
 import { ToolbarButton } from "@/FSD/shared/ui/toolbar-button/ToolbarButton";
 
 type DotsBoardT = (key: string, values?: Record<string, number>) => string;
+
+type BoardTouchHandlers = Readonly<{
+  mode: DotsGameMode;
+  cellSizePx: number;
+  rows: number;
+  cols: number;
+  placeLmb: UseDotsGameResult["placeLmb"];
+  polygonClick: UseDotsGameResult["polygonClick"];
+}>;
+
+/** Registers the Escape key listener for undo when the board is interactive. */
+function useEscapeUndo(isInteractive: boolean, undo: () => void): void {
+  useEffect(() => {
+    if (!isInteractive) {
+      return undefined;
+    }
+    const onKey = (event: KeyboardEvent): void => handleEscapeKey(event, undo);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [isInteractive, undo]);
+}
+
+/** Registers touch listeners on the board element for mobile input. */
+function useBoardTouchInput(
+  isInteractive: boolean,
+  boardRef: RefObject<HTMLDivElement | null>,
+  boardWrapRef: RefObject<HTMLDivElement | null>,
+  handlers: BoardTouchHandlers
+): void {
+  const { mode, cellSizePx, rows, cols, placeLmb, polygonClick } = handlers;
+  useEffect(() => {
+    if (!isInteractive) {
+      return undefined;
+    }
+    const boardEl = boardRef.current;
+    const wrapEl = boardWrapRef.current;
+    if (!boardEl || !wrapEl) {
+      return undefined;
+    }
+
+    const tapStart: MutablePoint = { x: null, y: null };
+    const lastMid: MutablePoint = { x: null, y: null };
+    const didTwoFingerScroll = { value: false };
+
+    const getBoardDownArgs = (clientX: number, clientY: number) => ({
+      clientX,
+      clientY,
+      boardEl,
+      mode,
+      cellSizePx,
+      rows,
+      cols,
+      placeLmb,
+      polygonClick
+    });
+
+    const onTouchStart = (event: TouchEvent): void =>
+      onBoardTouchStartPreventDefault({ tapStart, lastMid, didTwoFingerScroll }, event);
+    const onTouchMove = (event: TouchEvent): void =>
+      onBoardTouchMove({ wrapEl, tapStart, lastMid, didTwoFingerScroll }, event);
+    const onTouchEnd = (event: TouchEvent): void =>
+      onBoardTouchEndPreventDefault({ tapStart, lastMid, didTwoFingerScroll, getBoardDownArgs }, event);
+
+    boardEl.addEventListener("touchstart", onTouchStart, { passive: false });
+    boardEl.addEventListener("touchmove", onTouchMove, { passive: false });
+    boardEl.addEventListener("touchend", onTouchEnd, { passive: false });
+    boardEl.addEventListener("touchcancel", onTouchEnd, { passive: false });
+
+    return () => {
+      boardEl.removeEventListener("touchstart", onTouchStart);
+      boardEl.removeEventListener("touchmove", onTouchMove);
+      boardEl.removeEventListener("touchend", onTouchEnd);
+      boardEl.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [boardRef, boardWrapRef, cellSizePx, cols, isInteractive, mode, placeLmb, polygonClick, rows]);
+}
+
+/** Builds dot keys for chain-path highlighting during polygon drawing. */
+function buildChainPathDotKeys(mode: DotsGameMode, chainPath: readonly GridPoint[]): ReadonlySet<string> {
+  const keys = new Set<string>();
+  if (mode !== "drawPolygon") {
+    return keys;
+  }
+  for (const point of chainPath) {
+    keys.add(`d-${point.r}-${point.c}`);
+  }
+  return keys;
+}
 
 type BoardLine = Readonly<{ key: string; x1: number; y1: number; x2: number; y2: number }>;
 type BoardPoly = Readonly<{ key: string; points: string; fill: string }>;
@@ -115,13 +205,12 @@ type DotsBoardChromeProps = Readonly<{
   mode: DotsGameMode;
   pendingDot: GridPoint | null;
   onAccept: () => void;
-  onUndo: () => void;
+  onUndo?: () => void;
   onClear?: () => void;
   onExit?: () => void;
   exitDisabled?: boolean;
   onSurrender: () => void;
   hideAccept: boolean;
-  hideUndo: boolean;
   hideSurrender: boolean;
   extraStatus?: ReactNode;
 }>;
@@ -141,7 +230,6 @@ function DotsBoardChrome({
   exitDisabled = false,
   onSurrender,
   hideAccept,
-  hideUndo,
   hideSurrender,
   extraStatus
 }: DotsBoardChromeProps): ReactElement {
@@ -172,7 +260,7 @@ function DotsBoardChrome({
             {t("accept")}
           </ToolbarButton>
         )}
-        {hideUndo ? null : <ToolbarButton onClick={onUndo}>{t("undo")}</ToolbarButton>}
+        {onUndo ? <ToolbarButton onClick={onUndo}>{t("undo")}</ToolbarButton> : null}
         {onClear ? <ToolbarButton onClick={onClear}>{t("clear")}</ToolbarButton> : null}
         {onExit ? (
           <ToolbarButton onClick={onExit} disabled={exitDisabled}>
@@ -187,6 +275,20 @@ function DotsBoardChrome({
       </div>
     </>
   );
+}
+
+/** Returns the winner overlay text, or null in preview mode. */
+function formatWinnerOverlay(
+  preview: boolean,
+  t: ReturnType<typeof useTranslations>,
+  winner: PlayerId | null,
+  surrenderedBy: PlayerId | null,
+  playerLabels: Readonly<Record<PlayerId, string>>
+): string | null {
+  if (preview) {
+    return null;
+  }
+  return formatWinnerText(t, winner, surrenderedBy, playerLabels);
 }
 
 export type DotsBoardViewProps = Readonly<{
@@ -234,66 +336,20 @@ export function DotsBoardView({
   const height = (rows - 1) * cellSizePx;
   const isInteractive = !preview && !readOnly;
 
-  useEffect(() => {
-    if (!isInteractive) {
-      return undefined;
-    }
-    const onKey = (event: KeyboardEvent): void => handleEscapeKey(event, undo);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [isInteractive, undo]);
+  useEscapeUndo(isInteractive, undo);
 
-  useEffect(() => {
-    if (!isInteractive) {
-      return undefined;
-    }
-    const boardEl = boardRef.current;
-    const wrapEl = boardWrapRef.current;
-    if (!boardEl || !wrapEl) {
-      return undefined;
-    }
-
-    const tapStart: MutablePoint = { x: null, y: null };
-    const lastMid: MutablePoint = { x: null, y: null };
-    const didTwoFingerScroll = { value: false };
-
-    const getBoardDownArgs = (clientX: number, clientY: number) => ({
-      clientX,
-      clientY,
-      boardEl,
-      mode: state.mode,
-      cellSizePx,
-      rows,
-      cols,
-      placeLmb,
-      polygonClick
-    });
-
-    const onTouchStart = (event: TouchEvent): void =>
-      onBoardTouchStartPreventDefault({ tapStart, lastMid, didTwoFingerScroll }, event);
-    const onTouchMove = (event: TouchEvent): void =>
-      onBoardTouchMove({ wrapEl, tapStart, lastMid, didTwoFingerScroll }, event);
-    const onTouchEnd = (event: TouchEvent): void =>
-      onBoardTouchEndPreventDefault({ tapStart, lastMid, didTwoFingerScroll, getBoardDownArgs }, event);
-
-    boardEl.addEventListener("touchstart", onTouchStart, { passive: false });
-    boardEl.addEventListener("touchmove", onTouchMove, { passive: false });
-    boardEl.addEventListener("touchend", onTouchEnd, { passive: false });
-    boardEl.addEventListener("touchcancel", onTouchEnd, { passive: false });
-
-    return () => {
-      boardEl.removeEventListener("touchstart", onTouchStart);
-      boardEl.removeEventListener("touchmove", onTouchMove);
-      boardEl.removeEventListener("touchend", onTouchEnd);
-      boardEl.removeEventListener("touchcancel", onTouchEnd);
-    };
-  }, [cellSizePx, cols, isInteractive, placeLmb, polygonClick, rows, state.mode]);
+  useBoardTouchInput(isInteractive, boardRef, boardWrapRef, {
+    mode: state.mode,
+    cellSizePx,
+    rows,
+    cols,
+    placeLmb,
+    polygonClick
+  });
 
   const currentPlayerName = playerLabels[currentPlayer];
   const turnLabel = formatTurnLabel(t, mode, currentPlayerName);
-  const winnerText = preview ? null : formatWinnerText(t, winner, surrenderedBy, playerLabels);
+  const winnerText = formatWinnerOverlay(preview, t, winner, surrenderedBy, playerLabels);
 
   const gridLinesData = useMemo(
     () => buildGridLinesData({ rows, cols, cellSizePx, width, height }),
@@ -308,16 +364,7 @@ export function DotsBoardView({
 
   const dotClassMap: DotClassMap = { p0: styles.dotP0, p1: styles.dotP1, blockedEmpty: styles.dotBlockedEmpty };
   const pendingDotKey = pendingDot ? `d-${pendingDot.r}-${pendingDot.c}` : null;
-  const chainPathDotKeys = useMemo(() => {
-    const keys = new Set<string>();
-    if (mode !== "drawPolygon") {
-      return keys;
-    }
-    for (const point of chainPath) {
-      keys.add(`d-${point.r}-${point.c}`);
-    }
-    return keys;
-  }, [mode, chainPath]);
+  const chainPathDotKeys = useMemo(() => buildChainPathDotKeys(mode, chainPath), [mode, chainPath]);
   const previewStroke = previewStrokeForChain(mode, state.chainStart, state.cells);
 
   const wrapClassName = preview ? `${styles.wrap} ${styles.previewWrap}` : styles.wrap;
@@ -334,13 +381,12 @@ export function DotsBoardView({
           mode={state.mode}
           pendingDot={pendingDot}
           onAccept={accept}
-          onUndo={undo}
+          onUndo={readOnly ? undefined : undo}
           onClear={readOnly ? undefined : clear}
           onExit={onExit}
           exitDisabled={exitDisabled}
           onSurrender={surrender}
           hideAccept={hideAccept || readOnly}
-          hideUndo={readOnly}
           hideSurrender={hideSurrender || readOnly}
           extraStatus={extraStatus}
         />

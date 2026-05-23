@@ -28,19 +28,27 @@ type InRoomSetupBodyProps = Readonly<{
     patch: Readonly<{ config?: Readonly<{ rows: number; cols: number }>; isPrivate?: boolean; password?: string }>
   ) => void;
   onKick: (kickUserId: string) => void;
-  onLeave: () => void;
   startError: string | null;
 }>;
 
 /** In-room mode renderer: live-updates from `useRoomLive`; owner-only fields propagate to the server. */
-export function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
+export function InRoomSetupBody({
+  room,
+  userId,
+  defaults,
+  isLeaving = false,
+  onBack,
+  onStart,
+  onPatch,
+  onKick,
+  startError
+}: InRoomSetupBodyProps): ReactElement {
   const t = useTranslations("DotsGame");
-  const { room } = props;
-  const isOwner = room.ownerUserId === props.userId;
+  const isOwner = room.ownerUserId === userId;
   const players = useMemo(() => sortedPlayerUsers(room), [room]);
   const effectiveConfig = useMemo(
-    () => buildEffectiveConfig({ rows: room.config.rows, cols: room.config.cols, defaults: props.defaults }),
-    [room.config.rows, room.config.cols, props.defaults]
+    () => buildEffectiveConfig({ rows: room.config.rows, cols: room.config.cols, defaults }),
+    [room.config.rows, room.config.cols, defaults]
   );
   const playerLabels = useMemo(() => buildPlayerLabels(room, t), [room, t]);
   const canStart = isOwner && room.players.length === PLAYER_SLOTS;
@@ -48,9 +56,9 @@ export function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
   return (
     <div className={styles.setup}>
       <div className={styles.topBar}>
-        <BackButton onClick={props.onBack} label={t("back")} />
+        <BackButton onClick={onBack} label={t("back")} />
         <h2 className={styles.title}>{room.name}</h2>
-        <button type="button" className={styles.changeNameButton} onClick={props.onLeave} disabled={props.isLeaving}>
+        <button type="button" className={styles.changeNameButton} onClick={onBack} disabled={isLeaving}>
           {t("leave")}
         </button>
       </div>
@@ -60,12 +68,12 @@ export function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
         cols={room.config.cols}
         disabled={!isOwner}
         onRowsChange={(value) =>
-          props.onPatch({
+          onPatch({
             config: { ...room.config, rows: isValidGridDimension(value) ? value : room.config.rows }
           })
         }
         onColsChange={(value) =>
-          props.onPatch({
+          onPatch({
             config: { ...room.config, cols: isValidGridDimension(value) ? value : room.config.cols }
           })
         }
@@ -76,21 +84,21 @@ export function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
           users={players}
           ownerUserId={room.ownerUserId}
           canKick={isOwner}
-          onKick={props.onKick}
+          onKick={onKick}
         />
         <RosterPanel
           title={t("viewersTitle")}
           users={room.viewers}
           ownerUserId={room.ownerUserId}
           canKick={isOwner}
-          onKick={props.onKick}
+          onKick={onKick}
         />
       </RostersGrid>
-      {props.startError ? <p className={styles.error}>{props.startError}</p> : null}
+      {startError ? <p className={styles.error}>{startError}</p> : null}
       {isOwner && !canStart ? <p className={styles.ownerHint}>{t("notEnoughPlayers")}</p> : null}
       <div className={styles.actions}>
         {isOwner ? (
-          <DotsGameStartButton onClick={props.onStart} disabled={!canStart}>
+          <DotsGameStartButton onClick={onStart} disabled={!canStart}>
             {t("startGame")}
           </DotsGameStartButton>
         ) : null}

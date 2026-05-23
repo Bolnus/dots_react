@@ -41,7 +41,7 @@ export function resolveJoinAsViewer({
   }
   const isPlaying = summary?.status === "playing";
   const isFinished = summary?.status === "finished";
-  return Boolean(isPlaying) || Boolean(isFinished);
+  return isPlaying || isFinished;
 }
 
 /** Looks up a room summary from the cached rooms list (no network round-trip). */

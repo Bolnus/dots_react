@@ -40,6 +40,35 @@ async function handleNameSubmit({
   }
 }
 
+/** Rejoins the user's in-progress game from the rooms list. */
+function handleReconnectToActiveGame({
+  identity,
+  activePlayingRoom,
+  queryClient,
+  joinRoom,
+  setPendingJoin,
+  setJoinError
+}: Readonly<{
+  identity: DotsOnlineIdentity | null;
+  activePlayingRoom: DotsSessionActiveRoom | null;
+  queryClient: QueryClient;
+  joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest }>) => void;
+  setPendingJoin: (value: PendingJoin | null) => void;
+  setJoinError: (value: string | null) => void;
+}>): void {
+  if (!identity || !activePlayingRoom) {
+    return;
+  }
+  reconnectActiveGame({
+    roomId: activePlayingRoom.id,
+    identity,
+    queryClient,
+    joinRoom,
+    setPendingJoin,
+    setJoinError
+  });
+}
+
 export type DotsOnlineRoomsViewProps = Readonly<{
   identity: DotsOnlineIdentity | null;
   phase: IdentityPhase;
@@ -102,19 +131,16 @@ export function DotsOnlineRoomsView({
         onBack={onBackToLobby}
         onCreateRoom={() => requestCreateRoom({ displayName: identity?.displayName, setIsNameModalOpen, setView })}
         onChangeName={() => setIsNameModalOpen(true)}
-        onReconnect={() => {
-          if (!identity || !activePlayingRoom) {
-            return;
-          }
-          reconnectActiveGame({
-            roomId: activePlayingRoom.id,
+        onReconnect={() =>
+          handleReconnectToActiveGame({
             identity,
+            activePlayingRoom,
             queryClient,
             joinRoom,
             setPendingJoin,
             setJoinError
-          });
-        }}
+          })
+        }
         onOpenRoom={(roomId) =>
           openRoom({
             roomId,

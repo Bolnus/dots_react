@@ -42,6 +42,12 @@ export type UseDotsOnlineGameResult = Readonly<
 
 /** Locates the player slot for `userId` in the room (or `null` if a viewer / absent). */
 function findPlayerSlot(room: DotsRoomDetail, userId: string): PlayerId | null {
+  if (room.lockedPlayers.player0 === userId) {
+    return "player0";
+  }
+  if (room.lockedPlayers.player1 === userId) {
+    return "player1";
+  }
   return room.players.find((player) => player.user.userId === userId)?.slot ?? null;
 }
 

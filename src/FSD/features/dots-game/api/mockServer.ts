@@ -101,6 +101,11 @@ function toRoomDetail(room: RoomRecord): DotsRoomDetail {
     serverState: room.serverState,
     presence: room.presence,
     presenceBy: room.presenceBy,
+    lockedPlayers: {
+      player0: room.players.find((player) => player.slot === "player0")?.user.userId ?? null,
+      player1: room.players.find((player) => player.slot === "player1")?.user.userId ?? null
+    },
+    connectedUserIds: [],
     createdAtMs: room.createdAtMs
   };
 }

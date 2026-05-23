@@ -21,11 +21,28 @@ export type DotsOnlineUser = Readonly<{
   displayName: string;
 }>;
 
+/** Locked player user ids for an in-progress or finished game. */
+export type DotsLockedPlayers = Readonly<{
+  player0: string | null;
+  player1: string | null;
+}>;
+
 /** Response from `POST /sessions/register`. */
 export type RegisterSessionResult = Readonly<{
   userId: string;
   displayName: string;
   token: string;
+}>;
+
+/** Active in-progress game room returned by the session heartbeat. */
+export type DotsSessionActiveRoom = Readonly<{
+  id: string;
+  status: DotsRoomStatus;
+}>;
+
+/** Response from `POST /sessions/heartbeat`. */
+export type HeartbeatResult = Readonly<{
+  activeRoom: DotsSessionActiveRoom | null;
 }>;
 
 /** Snapshot of a single room shown in the rooms list. */
@@ -62,6 +79,8 @@ export type DotsRoomDetail = Readonly<{
   presence: DotsLocalState | null;
   /** User id whose `presence` is currently authoritative. */
   presenceBy: string | null;
+  lockedPlayers: DotsLockedPlayers;
+  connectedUserIds: readonly string[];
   createdAtMs: number;
 }>;
 

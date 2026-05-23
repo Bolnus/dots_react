@@ -21,6 +21,7 @@ type InRoomSetupBodyProps = Readonly<{
   room: DotsRoomDetail;
   userId: string;
   defaults: DotsGameConfig;
+  isLeaving?: boolean;
   onBack: () => void;
   onStart: () => void;
   onPatch: (
@@ -49,7 +50,7 @@ export function InRoomSetupBody(props: InRoomSetupBodyProps): ReactElement {
       <div className={styles.topBar}>
         <BackButton onClick={props.onBack} label={t("back")} />
         <h2 className={styles.title}>{room.name}</h2>
-        <button type="button" className={styles.changeNameButton} onClick={props.onLeave}>
+        <button type="button" className={styles.changeNameButton} onClick={props.onLeave} disabled={props.isLeaving}>
           {t("leave")}
         </button>
       </div>

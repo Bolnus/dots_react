@@ -56,6 +56,8 @@
     "createRoomTitle": "Create a room",
     "createRoomAction": "Create room",
     "changeName": "Change name",
+    "reconnect": "Reconnect to game",
+    "waitingForPlayerReconnect": "Waiting for the player to reconnect...",
     "enterYourName": "Choose a display name",
     "namePlaceholder": "Your name",
     "submitName": "Continue",

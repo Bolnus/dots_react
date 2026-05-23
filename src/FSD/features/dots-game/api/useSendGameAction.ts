@@ -32,6 +32,8 @@ export function useSendGameAction(roomId: string | null): UseSendGameActionResul
             serverState: null,
             presence: null,
             presenceBy: null,
+            lockedPlayers: { player0: null, player1: null },
+            connectedUserIds: [],
             createdAtMs: 0
           }
         };

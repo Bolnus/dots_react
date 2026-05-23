@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 
 import { useLeaveRoomMutation } from "../../../api/useLeaveRoomMutation";
 import { useRoomLive } from "../../../api/useRoomLive";
@@ -31,7 +31,23 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
 
   const { mutate: updateRoom } = useUpdateRoomMutation();
   const { mutate: startGame, error: startMutationError, reset: resetStart } = useStartGameMutation();
-  const { mutate: leaveRoom, isSuccess: didLeaveSucceed, reset: resetLeave } = useLeaveRoomMutation();
+  const {
+    mutate: leaveRoom,
+    isPending: isLeaving,
+    isSuccess: didLeaveSucceed,
+    reset: resetLeave
+  } = useLeaveRoomMutation();
+
+  const requestLeave = useCallback((): void => {
+    if (isLeaving) {
+      return;
+    }
+    if (!roomId) {
+      onBack?.();
+      return;
+    }
+    leaveRoom({ roomId, request: { userId } });
+  }, [isLeaving, leaveRoom, onBack, roomId, userId]);
 
   useEffect(() => {
     if (roomId && room && room.status === "playing") {
@@ -60,7 +76,7 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
         setDraft={setDraft}
         defaults={defaults}
         isCreating={isCreating}
-        onBack={onBack}
+        onBack={() => onBack?.()}
         onCreate={() => submitDraft({ draft, defaults, onCreateRoom })}
       />
     );
@@ -75,11 +91,12 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
       room={room}
       userId={userId}
       defaults={defaults}
-      onBack={onBack}
+      isLeaving={isLeaving}
+      onBack={requestLeave}
       onStart={() => requestStartGame({ roomId: room.id, userId, setStartError, startGame })}
       onPatch={(patch) => updateRoom({ roomId: room.id, request: { byUserId: userId, ...patch } })}
       onKick={(kickUserId) => updateRoom({ roomId: room.id, request: { byUserId: userId, kickUserId } })}
-      onLeave={() => leaveRoom({ roomId: room.id, request: { userId } })}
+      onLeave={requestLeave}
       startError={startError}
     />
   );

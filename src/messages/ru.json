@@ -56,6 +56,8 @@
     "createRoomTitle": "Создать комнату",
     "createRoomAction": "Создать комнату",
     "changeName": "Изменить имя",
+    "reconnect": "Вернуться в игру",
+    "waitingForPlayerReconnect": "Ожидание переподключения игрока...",
     "enterYourName": "Выберите отображаемое имя",
     "namePlaceholder": "Ваше имя",
     "submitName": "Продолжить",

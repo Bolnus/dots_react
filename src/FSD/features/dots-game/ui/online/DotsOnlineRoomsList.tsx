@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 
-import type { DotsRoomSummary } from "../../api/dotsOnlineApiTypes";
+import type { DotsRoomSummary, DotsSessionActiveRoom } from "../../api/dotsOnlineApiTypes";
 import { useRoomsListQuery } from "../../api/useRoomsListQuery";
 import styles from "./DotsOnlineRoomsList.module.css";
 import { DotsRoomItem } from "./DotsRoomItem";
@@ -12,11 +12,13 @@ import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
 
 export type DotsOnlineRoomsListProps = Readonly<{
   displayName: string;
+  activePlayingRoom?: DotsSessionActiveRoom | null;
   isJoining?: boolean;
   joiningRoomId?: string | null;
   onBack: () => void;
   onCreateRoom: () => void;
   onChangeName: () => void;
+  onReconnect: () => void;
   onOpenRoom: (roomId: string) => void;
 }>;
 
@@ -56,15 +58,18 @@ function RoomsBody({ isLoading, rooms, isJoining, joiningRoomId, onOpen, emptyLa
 /** Online rooms list view: rooms grid, plus-icon to create, and display-name edit control. */
 export function DotsOnlineRoomsList({
   displayName,
+  activePlayingRoom = null,
   isJoining = false,
   joiningRoomId = null,
   onBack,
   onCreateRoom,
   onChangeName,
+  onReconnect,
   onOpenRoom
 }: DotsOnlineRoomsListProps): ReactElement {
   const t = useTranslations("DotsGame");
   const { data: rooms, isLoading } = useRoomsListQuery();
+  const hasActiveGame = activePlayingRoom?.status === "playing";
 
   return (
     <div className={styles.container}>
@@ -76,15 +81,27 @@ export function DotsOnlineRoomsList({
         <div className={styles.topBarRight}>
           <div className={styles.nameBlock}>
             <span className={styles.nameTag}>{displayName}</span>
-            <ButtonIcon
-              onClick={onChangeName}
-              iconName="pencil"
-              background="ghost"
-              iconSize="sm"
-              title={t("changeName")}
-              disabled={isJoining}
-              className={styles.nameBlockEdit}
-            />
+            {hasActiveGame ? (
+              <ButtonIcon
+                onClick={onReconnect}
+                iconName="show"
+                background="ghost"
+                iconSize="sm"
+                title={t("reconnect")}
+                disabled={isJoining}
+                className={styles.nameBlockEdit}
+              />
+            ) : (
+              <ButtonIcon
+                onClick={onChangeName}
+                iconName="pencil"
+                background="ghost"
+                iconSize="sm"
+                title={t("changeName")}
+                disabled={isJoining}
+                className={styles.nameBlockEdit}
+              />
+            )}
           </div>
           <ButtonIcon
             onClick={onCreateRoom}

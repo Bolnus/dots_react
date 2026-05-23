@@ -9,6 +9,8 @@ import { dispatchDotsApiError } from "../../api/useDotsApiErrors";
 import { useRoomLive } from "../../api/useRoomLive";
 import { useSendGameAction } from "../../api/useSendGameAction";
 import { toClientGameConfig } from "../../model/boardConfig";
+import { currentServerPlacingPlayer } from "../../model/serverReducer";
+import type { PlayerId } from "../../model/types";
 import type { CommitRejectedResult } from "../../model/useDotsOnlineGame";
 import { useDotsOnlineGame } from "../../model/useDotsOnlineGame";
 
@@ -19,19 +21,32 @@ import { Icon } from "@/FSD/shared/ui/icon/Icon";
 export type DotsOnlinePlayProps = Readonly<{
   room: DotsRoomDetail;
   userId: string;
-  /** True while the parent's leave-room mutation is in flight; disables the exit button. */
-  isLeaving?: boolean;
   onExit: () => void;
 }>;
 
 type StatusTextArgs = Readonly<{
+  room: DotsRoomDetail;
   isViewer: boolean;
   isMyTurn: boolean;
   t: ReturnType<typeof useTranslations>;
 }>;
 
+/** Resolves the user id for the player whose turn it currently is. */
+function actingPlayerUserId(room: DotsRoomDetail): string | null {
+  if (!room.serverState || room.serverState.mode !== "play") {
+    return null;
+  }
+  const slot: PlayerId = currentServerPlacingPlayer(room.serverState);
+  return slot === "player0" ? room.lockedPlayers.player0 : room.lockedPlayers.player1;
+}
+
 /** Picks the localized status text for the current participant role + turn. */
 function computeStatusText(args: StatusTextArgs): string {
+  const actingUserId = actingPlayerUserId(args.room);
+  const isActingConnected = actingUserId === null || args.room.connectedUserIds.includes(actingUserId);
+  if (args.room.status === "playing" && !isActingConnected) {
+    return args.t("waitingForPlayerReconnect");
+  }
   if (args.isViewer) {
     return args.t("viewingMode");
   }
@@ -42,12 +57,7 @@ function computeStatusText(args: StatusTextArgs): string {
 }
 
 /** Online play wrapper: drives `DotsBoardView` with `useDotsOnlineGame` + viewer / status chrome. */
-export function DotsOnlinePlay({
-  room: initialRoom,
-  userId,
-  isLeaving = false,
-  onExit
-}: DotsOnlinePlayProps): ReactElement {
+export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnlinePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
   const { room: liveRoom, applyRoomSnapshot } = useRoomLive(initialRoom.id);
   const room = liveRoom ?? initialRoom;
@@ -63,7 +73,7 @@ export function DotsOnlinePlay({
 
   const { role } = online;
   const isViewer = role === "viewer";
-  const statusText = computeStatusText({ isViewer, isMyTurn: online.isMyTurn, t });
+  const statusText = computeStatusText({ room, isViewer, isMyTurn: online.isMyTurn, t });
 
   const extraStatus = (
     <div className={styles.statusBarRight}>
@@ -87,7 +97,6 @@ export function DotsOnlinePlay({
       playerLabels={online.playerLabels}
       game={online}
       onExit={onExit}
-      exitDisabled={isLeaving}
       readOnly={isViewer}
       extraStatus={extraStatus}
     />

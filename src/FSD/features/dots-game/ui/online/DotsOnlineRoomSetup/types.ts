@@ -12,7 +12,7 @@ export type DotsOnlineRoomSetupProps = Readonly<{
   userId: string;
   /** True while the parent's create-room mutation is in flight (draft mode only). */
   isCreating?: boolean;
-  onBack: () => void;
+  onBack?: () => void;
   onGameStarted: (roomId: string) => void;
   onLeftRoom: () => void;
   onCreateRoom: (draft: CreateRoomDraft) => void;

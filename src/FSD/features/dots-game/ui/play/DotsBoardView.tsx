@@ -121,6 +121,7 @@ type DotsBoardChromeProps = Readonly<{
   exitDisabled?: boolean;
   onSurrender: () => void;
   hideAccept: boolean;
+  hideUndo: boolean;
   hideSurrender: boolean;
   extraStatus?: ReactNode;
 }>;
@@ -140,6 +141,7 @@ function DotsBoardChrome({
   exitDisabled = false,
   onSurrender,
   hideAccept,
+  hideUndo,
   hideSurrender,
   extraStatus
 }: DotsBoardChromeProps): ReactElement {
@@ -170,7 +172,7 @@ function DotsBoardChrome({
             {t("accept")}
           </ToolbarButton>
         )}
-        <ToolbarButton onClick={onUndo}>{t("undo")}</ToolbarButton>
+        {hideUndo ? null : <ToolbarButton onClick={onUndo}>{t("undo")}</ToolbarButton>}
         {onClear ? <ToolbarButton onClick={onClear}>{t("clear")}</ToolbarButton> : null}
         {onExit ? (
           <ToolbarButton onClick={onExit} disabled={exitDisabled}>
@@ -338,6 +340,7 @@ export function DotsBoardView({
           exitDisabled={exitDisabled}
           onSurrender={surrender}
           hideAccept={hideAccept || readOnly}
+          hideUndo={readOnly}
           hideSurrender={hideSurrender || readOnly}
           extraStatus={extraStatus}
         />

@@ -6,13 +6,43 @@ import type {
   CreateRoomRequest,
   DotsRoomDetail,
   DotsRoomSummary,
-  JoinRoomRequest,
-  LeaveRoomRequest
+  DotsSessionActiveRoom,
+  JoinRoomRequest
 } from "../api/dotsOnlineApiTypes";
 import { DOTS_QUERY_KEYS } from "../api/queryKeys";
 import type { CreateRoomDraft } from "../ui/online/DotsOnlineRoomSetup/types";
 import type { DotsOnlineIdentity } from "./onlineIdentityTypes";
 import { DotsOnlineViewKind, type DotsOnlineView, type PendingJoin } from "./orchestratorTypes";
+
+/** True when the user is one of the locked players in the room snapshot. */
+export function isUserLockedPlayer(room: DotsRoomDetail, userId: string): boolean {
+  return room.lockedPlayers.player0 === userId || room.lockedPlayers.player1 === userId;
+}
+
+/** Picks whether a join should enter as viewer for the given room context. */
+export function resolveJoinAsViewer({
+  roomId,
+  userId,
+  activeRoom,
+  summary,
+  roomDetail
+}: Readonly<{
+  roomId: string;
+  userId: string;
+  activeRoom: DotsSessionActiveRoom | null | undefined;
+  summary: DotsRoomSummary | null;
+  roomDetail: DotsRoomDetail | null;
+}>): boolean {
+  if (activeRoom?.id === roomId && activeRoom.status === "playing") {
+    return false;
+  }
+  if (roomDetail && isUserLockedPlayer(roomDetail, userId)) {
+    return false;
+  }
+  const isPlaying = summary?.status === "playing";
+  const isFinished = summary?.status === "finished";
+  return Boolean(isPlaying) || Boolean(isFinished);
+}
 
 /** Looks up a room summary from the cached rooms list (no network round-trip). */
 export function findRoomSummary(cached: DotsRoomSummary[] | undefined, roomId: string): DotsRoomSummary | null {
@@ -101,6 +131,7 @@ export function performJoin({
 export function openRoom({
   roomId,
   identity,
+  activeRoom,
   queryClient,
   joinRoom,
   setIsNameModalOpen,
@@ -109,6 +140,7 @@ export function openRoom({
 }: Readonly<{
   roomId: string;
   identity: DotsOnlineIdentity | null;
+  activeRoom: DotsSessionActiveRoom | null | undefined;
   queryClient: QueryClient;
   joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest }>) => void;
   setIsNameModalOpen: (open: boolean) => void;
@@ -121,11 +153,81 @@ export function openRoom({
   }
   const cached = queryClient.getQueryData<DotsRoomSummary[]>(DOTS_QUERY_KEYS.roomsList);
   const summary = findRoomSummary(cached, roomId);
+  const roomDetail = queryClient.getQueryData<DotsRoomDetail>(DOTS_QUERY_KEYS.room(roomId)) ?? null;
   const isProtected = summary?.hasPassword === true;
-  const isPlaying = summary?.status === "playing";
-  const isFinished = summary?.status === "finished";
-  const asViewer = Boolean(isPlaying) || Boolean(isFinished);
+  const asViewer = resolveJoinAsViewer({
+    roomId,
+    userId: identity.userId,
+    activeRoom,
+    summary,
+    roomDetail
+  });
   const pending: PendingJoin = { roomId, asViewer, needsPassword: isProtected };
+  setJoinError(null);
+  if (isProtected) {
+    setPendingJoin(pending);
+    return;
+  }
+  performJoin({
+    pending,
+    password: undefined,
+    userId: identity.userId,
+    displayName: identity.displayName,
+    joinRoom,
+    setJoinError
+  });
+}
+
+/** Attempts to rejoin an active game without prompting (skips password-protected rooms). */
+export function tryAutoReconnectActiveGame({
+  roomId,
+  identity,
+  queryClient,
+  joinRoom
+}: Readonly<{
+  roomId: string;
+  identity: DotsOnlineIdentity;
+  queryClient: QueryClient;
+  joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest }>) => void;
+}>): void {
+  const cached = queryClient.getQueryData<DotsRoomSummary[]>(DOTS_QUERY_KEYS.roomsList);
+  const summary = findRoomSummary(cached, roomId);
+  const roomDetail = queryClient.getQueryData<DotsRoomDetail>(DOTS_QUERY_KEYS.room(roomId)) ?? null;
+  const isProtected = roomDetail?.hasPassword === true || summary?.hasPassword === true;
+  if (isProtected) {
+    return;
+  }
+  performJoin({
+    pending: { roomId, asViewer: false, needsPassword: false },
+    password: undefined,
+    userId: identity.userId,
+    displayName: identity.displayName,
+    joinRoom,
+    setJoinError: () => undefined
+  });
+}
+
+/** Rejoins an in-progress game as the locked player (not as viewer). */
+export function reconnectActiveGame({
+  roomId,
+  identity,
+  queryClient,
+  joinRoom,
+  setPendingJoin,
+  setJoinError
+}: Readonly<{
+  roomId: string;
+  identity: DotsOnlineIdentity;
+  queryClient: QueryClient;
+  joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest }>) => void;
+  setPendingJoin: (value: PendingJoin | null) => void;
+  setJoinError: (value: string | null) => void;
+}>): void {
+  const cached = queryClient.getQueryData<DotsRoomSummary[]>(DOTS_QUERY_KEYS.roomsList);
+  const summary = findRoomSummary(cached, roomId);
+  const roomDetail = queryClient.getQueryData<DotsRoomDetail>(DOTS_QUERY_KEYS.room(roomId)) ?? null;
+  const isProtected = roomDetail?.hasPassword === true || summary?.hasPassword === true;
+  const pending: PendingJoin = { roomId, asViewer: false, needsPassword: isProtected };
   setJoinError(null);
   if (isProtected) {
     setPendingJoin(pending);
@@ -181,23 +283,19 @@ export function routeJoinedRoom({
   setView({ kind: DotsOnlineViewKind.Play, roomId: room.id });
 }
 
-/** Fires the leave mutation when leaving active gameplay; otherwise navigates straight back. */
+/** Navigates back to the rooms list without leaving an in-progress game. */
 export function exitGame({
   view,
-  identity,
-  leaveRoom,
   setView
 }: Readonly<{
   view: DotsOnlineView;
-  identity: DotsOnlineIdentity | null;
-  leaveRoom: (args: Readonly<{ roomId: string; request: LeaveRoomRequest }>) => void;
   setView: (view: DotsOnlineView) => void;
 }>): void {
-  if (view.kind !== DotsOnlineViewKind.Play || !identity) {
+  if (view.kind !== DotsOnlineViewKind.Play) {
     setView({ kind: DotsOnlineViewKind.List });
     return;
   }
-  leaveRoom({ roomId: view.roomId, request: { userId: identity.userId } });
+  setView({ kind: DotsOnlineViewKind.List });
 }
 
 /** Submits the password from the join modal (no-op when identity is missing). */

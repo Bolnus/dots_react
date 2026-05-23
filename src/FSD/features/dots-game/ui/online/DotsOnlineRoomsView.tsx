@@ -4,12 +4,13 @@ import { useEffect, useState, type ReactElement } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-import type { JoinRoomRequest } from "../../api/dotsOnlineApiTypes";
+import type { DotsSessionActiveRoom, JoinRoomRequest } from "../../api/dotsOnlineApiTypes";
 import type { DotsOnlineIdentity, IdentityPhase } from "../../model/onlineIdentityTypes";
 import {
   closeJoinModal,
   closeNameModal,
   openRoom,
+  reconnectActiveGame,
   requestCreateRoom,
   submitJoinPassword,
   submitName
@@ -47,6 +48,7 @@ export type DotsOnlineRoomsViewProps = Readonly<{
   isJoining: boolean;
   joiningRoomId: string | null;
   joinMutationError: Error | null;
+  activePlayingRoom: DotsSessionActiveRoom | null;
   queryClient: QueryClient;
   joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest }>) => void;
   setDisplayName: (name: string) => Promise<void>;
@@ -64,6 +66,7 @@ export function DotsOnlineRoomsView({
   isJoining,
   joiningRoomId,
   joinMutationError,
+  activePlayingRoom,
   queryClient,
   joinRoom,
   setDisplayName,
@@ -93,15 +96,30 @@ export function DotsOnlineRoomsView({
     <>
       <DotsOnlineRoomsList
         displayName={identity?.displayName ?? storedDisplayName ?? ""}
+        activePlayingRoom={activePlayingRoom}
         isJoining={isListDisabled}
         joiningRoomId={joiningRoomId}
         onBack={onBackToLobby}
         onCreateRoom={() => requestCreateRoom({ displayName: identity?.displayName, setIsNameModalOpen, setView })}
         onChangeName={() => setIsNameModalOpen(true)}
+        onReconnect={() => {
+          if (!identity || !activePlayingRoom) {
+            return;
+          }
+          reconnectActiveGame({
+            roomId: activePlayingRoom.id,
+            identity,
+            queryClient,
+            joinRoom,
+            setPendingJoin,
+            setJoinError
+          });
+        }}
         onOpenRoom={(roomId) =>
           openRoom({
             roomId,
             identity,
+            activeRoom: activePlayingRoom,
             queryClient,
             joinRoom,
             setIsNameModalOpen,

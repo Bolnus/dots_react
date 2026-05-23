@@ -4,6 +4,7 @@ import type {
   CreateRoomRequest,
   DotsRoomDetail,
   DotsRoomSummary,
+  HeartbeatResult,
   JoinRoomRequest,
   PatchRoomRequest,
   RegisterSessionResult
@@ -26,10 +27,20 @@ export async function registerSession(
   return data;
 }
 
+/** Returns session info including any in-progress active game room. */
+export async function fetchSession(options: Readonly<{ silentError?: boolean }> = {}): Promise<HeartbeatResult> {
+  const { data } = await dotsHttp.post<HeartbeatResult>(
+    "/sessions/heartbeat",
+    undefined,
+    withSilentDotsError(options.silentError === true)
+  );
+  return data;
+}
+
 /** Returns whether the stored bearer token is still valid. */
 export async function validateSession(): Promise<boolean> {
   try {
-    await dotsHttp.post("/sessions/heartbeat", undefined, withSilentDotsError(true));
+    await fetchSession({ silentError: true });
     return true;
   } catch {
     return false;

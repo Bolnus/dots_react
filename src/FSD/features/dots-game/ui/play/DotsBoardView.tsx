@@ -204,6 +204,7 @@ type DotsBoardChromeProps = Readonly<{
   turnLabel: string;
   mode: DotsGameMode;
   pendingDot: GridPoint | null;
+  isMyTurn: boolean;
   onAccept: () => void;
   onUndo?: () => void;
   onClear?: () => void;
@@ -223,6 +224,7 @@ function DotsBoardChrome({
   turnLabel,
   mode,
   pendingDot,
+  isMyTurn,
   onAccept,
   onUndo,
   onClear,
@@ -256,11 +258,15 @@ function DotsBoardChrome({
       </div>
       <div className={styles.actions}>
         {hideAccept ? null : (
-          <ToolbarButton onClick={onAccept} disabled={mode !== "play" || pendingDot === null}>
+          <ToolbarButton onClick={onAccept} disabled={mode !== "play" || pendingDot === null || !isMyTurn}>
             {t("accept")}
           </ToolbarButton>
         )}
-        {onUndo ? <ToolbarButton onClick={onUndo}>{t("undo")}</ToolbarButton> : null}
+        {onUndo ? (
+          <ToolbarButton onClick={onUndo} disabled={!isMyTurn}>
+            {t("undo")}
+          </ToolbarButton>
+        ) : null}
         {onClear ? <ToolbarButton onClick={onClear}>{t("clear")}</ToolbarButton> : null}
         {onExit ? (
           <ToolbarButton onClick={onExit} disabled={exitDisabled}>
@@ -310,6 +316,8 @@ export type DotsBoardViewProps = Readonly<{
   hideAccept?: boolean;
   /** Hide the Surrender button (e.g. preview / viewer / hot-seat-keeps-it). */
   hideSurrender?: boolean;
+  /** When false, Accept/Undo are disabled (online opponent's turn). Defaults to true. */
+  isMyTurn?: boolean;
 }>;
 
 /** Shared in-game board, scoring, and actions; takes the game state via the `game` prop. */
@@ -323,7 +331,8 @@ export function DotsBoardView({
   readOnly = false,
   extraStatus,
   hideAccept = false,
-  hideSurrender = false
+  hideSurrender = false,
+  isMyTurn = true
 }: DotsBoardViewProps): ReactElement {
   const t = useTranslations("DotsGame");
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -336,7 +345,7 @@ export function DotsBoardView({
   const height = (rows - 1) * cellSizePx;
   const isInteractive = !preview && !readOnly;
 
-  useEscapeUndo(isInteractive, undo);
+  useEscapeUndo(isInteractive && isMyTurn, undo);
 
   useBoardTouchInput(isInteractive, boardRef, boardWrapRef, {
     mode: state.mode,
@@ -380,6 +389,7 @@ export function DotsBoardView({
           turnLabel={turnLabel}
           mode={state.mode}
           pendingDot={pendingDot}
+          isMyTurn={isMyTurn}
           onAccept={accept}
           onUndo={readOnly ? undefined : undo}
           onClear={readOnly ? undefined : clear}

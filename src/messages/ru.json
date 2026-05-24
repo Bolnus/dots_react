@@ -58,6 +58,7 @@
     "changeName": "Изменить имя",
     "reconnect": "Вернуться в игру",
     "waitingForPlayerReconnect": "Ожидание переподключения игрока...",
+    "reconnecting": "Переподключение…",
     "enterYourName": "Выберите отображаемое имя",
     "namePlaceholder": "Ваше имя",
     "submitName": "Продолжить",

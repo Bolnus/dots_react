@@ -510,6 +510,26 @@ function isActingPlayer(room: RoomRecord, userId: string): boolean {
   return slot === acting;
 }
 
+/** True when the user is an active player in a playing room. */
+function isLockedPlayer(room: RoomRecord, userId: string): boolean {
+  if (room.status !== "playing") {
+    return false;
+  }
+  return findPlayerSlot(room, userId) !== null;
+}
+
+/** True when the user may commit the given action (turn-gated except for surrender). */
+function canCommitAction(room: RoomRecord, userId: string, action: CommitActionRequest["action"]): boolean {
+  if (!isLockedPlayer(room, userId)) {
+    return false;
+  }
+  if (action.type === "SURRENDER") {
+    const slot = findPlayerSlot(room, userId);
+    return slot !== null && action.by === slot;
+  }
+  return isActingPlayer(room, userId);
+}
+
 /** Applies a checksum-validated committed action; broadcasts the new state on success. */
 export async function applyCommittedAction(roomId: string, request: CommitActionRequest): Promise<CommitActionResult> {
   await delay(REALTIME_LATENCY_MS);
@@ -520,7 +540,7 @@ export async function applyCommittedAction(roomId: string, request: CommitAction
     }
     throw new Error(`Room not found: ${roomId}`);
   }
-  if (!isActingPlayer(room, request.userId)) {
+  if (!canCommitAction(room, request.userId, request.action)) {
     return { status: "rejected", reason: "notAuthorized", snapshot: toRoomDetail(room) };
   }
   if (request.prevHash !== room.serverState.hash) {

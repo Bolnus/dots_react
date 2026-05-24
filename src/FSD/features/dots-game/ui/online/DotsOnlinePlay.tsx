@@ -28,6 +28,7 @@ type StatusTextArgs = Readonly<{
   room: DotsRoomDetail;
   isViewer: boolean;
   isMyTurn: boolean;
+  isConnected: boolean;
   t: ReturnType<typeof useTranslations>;
 }>;
 
@@ -47,6 +48,9 @@ function computeStatusText(args: StatusTextArgs): string {
   if (args.room.status === "playing" && !isActingConnected) {
     return args.t("waitingForPlayerReconnect");
   }
+  if (args.room.status === "playing" && !args.isConnected) {
+    return args.t("reconnecting");
+  }
   if (args.isViewer) {
     return args.t("viewingMode");
   }
@@ -59,7 +63,7 @@ function computeStatusText(args: StatusTextArgs): string {
 /** Online play wrapper: drives `DotsBoardView` with `useDotsOnlineGame` + viewer / status chrome. */
 export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnlinePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
-  const { room: liveRoom, applyRoomSnapshot } = useRoomLive(initialRoom.id);
+  const { room: liveRoom, isConnected, applyRoomSnapshot } = useRoomLive(initialRoom.id);
   const room = liveRoom ?? initialRoom;
   const send = useSendGameAction(room.id);
   const onCommitRejected = useCallback(
@@ -73,7 +77,7 @@ export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnline
 
   const { role } = online;
   const isViewer = role === "viewer";
-  const statusText = computeStatusText({ room, isViewer, isMyTurn: online.isMyTurn, t });
+  const statusText = computeStatusText({ room, isViewer, isMyTurn: online.isMyTurn, isConnected, t });
 
   const extraStatus = (
     <div className={styles.statusBarRight}>
@@ -98,6 +102,7 @@ export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnline
       game={online}
       onExit={onExit}
       readOnly={isViewer}
+      isMyTurn={online.isMyTurn}
       extraStatus={extraStatus}
     />
   );

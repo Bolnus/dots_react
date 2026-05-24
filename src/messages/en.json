@@ -58,6 +58,7 @@
     "changeName": "Change name",
     "reconnect": "Reconnect to game",
     "waitingForPlayerReconnect": "Waiting for the player to reconnect...",
+    "reconnecting": "Reconnecting…",
     "enterYourName": "Choose a display name",
     "namePlaceholder": "Your name",
     "submitName": "Continue",

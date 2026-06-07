@@ -27,7 +27,9 @@ export type DotsServerGameState = Readonly<{
 export type ReduceServerRejectReason =
   | "gameNotInPlay"
   | "notYourTurn"
-  | "invalidPlacementCell"
+  | "placementPointOutOfBounds"
+  | "placementCellBlocked"
+  | "placementCellOccupied"
   | "captureRingTooShort"
   | "invalidCaptureStarter"
   | "captureRingVerticesInvalid"

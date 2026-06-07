@@ -1,6 +1,6 @@
 import type { DotsLocalState } from "../model/localState";
 import type { DotsServerAction } from "../model/serverReducer";
-import type { DotsServerGameState } from "../model/serverState";
+import type { DotsServerGameState, ReduceServerRejectReason } from "../model/serverState";
 import type { PlayerId } from "../model/types";
 
 /** Board dimensions persisted and transmitted by the server (no UI cell size). */
@@ -138,7 +138,7 @@ export type EphemeralActionRequest = Readonly<{
 }>;
 
 /** Discriminated failure for committed actions; clients use `snapshot` to resync. */
-export type CommitRejectReason = "prevHash" | "badHash" | "notAuthorized" | "notInGame";
+export type CommitRejectReason = "prevHash" | "badHash" | "notAuthorized" | "notInGame" | ReduceServerRejectReason;
 
 /** Successful or rejected response from `applyCommittedAction`. */
 export type CommitActionResult =

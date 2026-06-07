@@ -23,6 +23,21 @@ export type DotsServerGameState = Readonly<{
   hash: string;
 }>;
 
+/** Why `reduceServer` left state unchanged for a committed action. */
+export type ReduceServerRejectReason =
+  | "gameNotInPlay"
+  | "notYourTurn"
+  | "invalidPlacementCell"
+  | "captureRingTooShort"
+  | "invalidCaptureStarter"
+  | "captureRingVerticesInvalid"
+  | "invalidCapture";
+
+/** Outcome of applying one committed action to authoritative server state. */
+export type ReduceServerResult =
+  | Readonly<{ ok: true; state: DotsServerGameState }>
+  | Readonly<{ ok: false; reason: ReduceServerRejectReason; state: DotsServerGameState }>;
+
 /** Canonical, stable string projection of a server state used for the checksum. */
 export function canonicalizeServerState(state: Omit<DotsServerGameState, "hash">): string {
   const cellRows = state.cells.map((row) =>

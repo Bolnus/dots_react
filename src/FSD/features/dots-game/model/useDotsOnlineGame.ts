@@ -104,14 +104,14 @@ function performCommitPlacement(
   server: DotsServerGameState
 ): void {
   const predicted = reduceServer(server, { type: "COMMIT_PLACEMENT", point, by });
-  if (predicted === server) {
+  if (!predicted.ok) {
     return;
   }
   void submitCommit(ctx, {
     userId: ctx.userId,
     action: { type: "COMMIT_PLACEMENT", point, by },
     prevHash: server.hash,
-    expectedNextHash: predicted.hash
+    expectedNextHash: predicted.state.hash
   });
 }
 
@@ -123,28 +123,28 @@ function performCommitCapture(
   server: DotsServerGameState
 ): void {
   const predicted = reduceServer(server, { type: "COMMIT_CAPTURE", ring, by });
-  if (predicted === server) {
+  if (!predicted.ok) {
     return;
   }
   void submitCommit(ctx, {
     userId: ctx.userId,
     action: { type: "COMMIT_CAPTURE", ring, by },
     prevHash: server.hash,
-    expectedNextHash: predicted.hash
+    expectedNextHash: predicted.state.hash
   });
 }
 
 /** Commits surrender to the server. */
 function performCommitSurrender(ctx: OnlineCommitContext, by: PlayerId, server: DotsServerGameState): void {
   const predicted = reduceServer(server, { type: "SURRENDER", by });
-  if (predicted === server) {
+  if (!predicted.ok) {
     return;
   }
   void submitCommit(ctx, {
     userId: ctx.userId,
     action: { type: "SURRENDER", by },
     prevHash: server.hash,
-    expectedNextHash: predicted.hash
+    expectedNextHash: predicted.state.hash
   });
 }
 

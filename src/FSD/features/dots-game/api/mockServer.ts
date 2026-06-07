@@ -308,24 +308,24 @@ function runBotMove(roomId: string): void {
   const move = pickRandomEmptyCell(room.serverState);
   if (!move) {
     const surrendered = reduceServer(room.serverState, { type: "SURRENDER", by: acting });
-    if (surrendered === room.serverState) {
+    if (!surrendered.ok) {
       return;
     }
-    room.serverState = surrendered;
-    if (surrendered.mode === "ended") {
+    room.serverState = surrendered.state;
+    if (surrendered.state.mode === "ended") {
       room.status = "finished";
     }
     broadcastRoomEvent(roomId, { type: "STATE_DELTA", room: toRoomDetail(room) });
     return;
   }
   const placed = reduceServer(room.serverState, { type: "COMMIT_PLACEMENT", point: move, by: acting });
-  if (placed === room.serverState) {
+  if (!placed.ok) {
     return;
   }
-  room.serverState = placed;
+  room.serverState = placed.state;
   room.presence = null;
   room.presenceBy = null;
-  if (placed.mode === "ended") {
+  if (placed.state.mode === "ended") {
     room.status = "finished";
   }
   broadcastRoomEvent(roomId, { type: "STATE_DELTA", room: toRoomDetail(room) });
@@ -546,10 +546,11 @@ export async function applyCommittedAction(roomId: string, request: CommitAction
   if (request.prevHash !== room.serverState.hash) {
     return { status: "rejected", reason: "prevHash", snapshot: toRoomDetail(room) };
   }
-  const nextState = reduceServer(room.serverState, request.action);
-  if (nextState === room.serverState) {
-    return { status: "rejected", reason: "notAuthorized", snapshot: toRoomDetail(room) };
+  const reduced = reduceServer(room.serverState, request.action);
+  if (!reduced.ok) {
+    return { status: "rejected", reason: reduced.reason, snapshot: toRoomDetail(room) };
   }
+  const nextState = reduced.state;
   if (nextState.hash !== request.expectedNextHash) {
     return { status: "rejected", reason: "badHash", snapshot: toRoomDetail(room) };
   }

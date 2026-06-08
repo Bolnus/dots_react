@@ -22,7 +22,7 @@ export function RosterRow({ user, isOwner, canKick, kickLabel, onKick }: RosterR
   return (
     <li className={styles.rosterRow}>
       <span className={styles.rosterMain}>
-        {user.isAi ? <Icon iconName="ai" size="sm" /> : null}
+        {user.isAi ? <Icon iconName="ai" size="md" /> : null}
         <span>{user.displayName}</span>
         {isOwner ? <span className={styles.ownerBadge}>★</span> : null}
       </span>

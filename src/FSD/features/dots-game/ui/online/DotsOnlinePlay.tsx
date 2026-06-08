@@ -54,8 +54,7 @@ function isActingAiPlayer(room: DotsRoomDetail, actingUserId: string | null): bo
 function computeStatusText(args: StatusTextArgs): string {
   const actingUserId = actingPlayerUserId(args.room);
   const isActingConnected = actingUserId === null || args.room.connectedUserIds.includes(actingUserId);
-  const isActingAi = isActingAiPlayer(args.room, actingUserId);
-  if (args.room.status === "playing" && !isActingConnected && !isActingAi) {
+  if (args.room.status === "playing" && !isActingConnected && !isActingAiPlayer(args.room, actingUserId)) {
     return args.t("waitingForPlayerReconnect");
   }
   if (args.room.status === "playing" && !args.isConnected) {

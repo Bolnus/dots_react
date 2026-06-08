@@ -11,7 +11,7 @@ import panelStyles from "./RosterPanel.module.css";
 import { RosterRow, type RosterUser } from "./RosterRow";
 import styles from "./PlayersRosterPanel.module.css";
 
-export type PlayersRosterPanelProps = Readonly<{
+type PlayersRosterPanelProps = Readonly<{
   room: DotsRoomDetail;
   ownerUserId: string;
   canKick: boolean;

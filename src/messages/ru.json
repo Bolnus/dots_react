@@ -73,6 +73,8 @@
     "viewersTitle": "Зрители",
     "viewersCount": "{count} наблюдают",
     "playerCount": "{filled}/{total}",
+    "addAi": "Добавить ИИ",
+    "addingAi": "Добавляем ИИ…",
     "kick": "Исключить",
     "leaveRoom": "Покинуть комнату",
     "password": "Пароль",

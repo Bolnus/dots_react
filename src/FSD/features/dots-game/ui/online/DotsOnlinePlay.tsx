@@ -41,11 +41,21 @@ function actingPlayerUserId(room: DotsRoomDetail): string | null {
   return slot === "player0" ? room.lockedPlayers.player0 : room.lockedPlayers.player1;
 }
 
+/** Returns true when the acting player is the room's AI opponent. */
+function isActingAiPlayer(room: DotsRoomDetail, actingUserId: string | null): boolean {
+  if (actingUserId === null) {
+    return false;
+  }
+  const actingPlayer = room.players.find((player) => player.user.userId === actingUserId);
+  return actingPlayer?.user.isAi === true;
+}
+
 /** Picks the localized status text for the current participant role + turn. */
 function computeStatusText(args: StatusTextArgs): string {
   const actingUserId = actingPlayerUserId(args.room);
   const isActingConnected = actingUserId === null || args.room.connectedUserIds.includes(actingUserId);
-  if (args.room.status === "playing" && !isActingConnected) {
+  const isActingAi = isActingAiPlayer(args.room, actingUserId);
+  if (args.room.status === "playing" && !isActingConnected && !isActingAi) {
     return args.t("waitingForPlayerReconnect");
   }
   if (args.room.status === "playing" && !args.isConnected) {

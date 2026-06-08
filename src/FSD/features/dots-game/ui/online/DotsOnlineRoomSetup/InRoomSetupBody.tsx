@@ -10,11 +10,12 @@ import type { DotsGameConfig } from "../../../model/types";
 
 import { DotsGamePlay } from "../../play/DotsGamePlay";
 import { DotsGameStartButton } from "../../play/DotsGameStartButton";
+import { PlayersRosterPanel } from "../../roster/PlayersRosterPanel";
 import { RosterPanel, RostersGrid } from "../../roster/RosterPanel";
 import { buildEffectiveConfig } from "./roomSetupUtils";
 import { GridSizeFields } from "./GridSizeFields";
 import styles from "./InRoomSetupBody.module.css";
-import { buildPlayerLabels, PLAYER_SLOTS, sortedPlayerUsers } from "./roomSetupUtils";
+import { buildPlayerLabels, PLAYER_SLOTS } from "./roomSetupUtils";
 import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";
 
 type InRoomSetupBodyProps = Readonly<{
@@ -28,6 +29,8 @@ type InRoomSetupBodyProps = Readonly<{
     patch: Readonly<{ config?: Readonly<{ rows: number; cols: number }>; isPrivate?: boolean; password?: string }>
   ) => void;
   onKick: (kickUserId: string) => void;
+  onAddAi: () => void;
+  isAddingAi?: boolean;
   startError: string | null;
 }>;
 
@@ -41,11 +44,12 @@ export function InRoomSetupBody({
   onStart,
   onPatch,
   onKick,
+  onAddAi,
+  isAddingAi = false,
   startError
 }: InRoomSetupBodyProps): ReactElement {
   const t = useTranslations("DotsGame");
   const isOwner = room.ownerUserId === userId;
-  const players = useMemo(() => sortedPlayerUsers(room), [room]);
   const effectiveConfig = useMemo(
     () => buildEffectiveConfig({ rows: room.config.rows, cols: room.config.cols, defaults }),
     [room.config.rows, room.config.cols, defaults]
@@ -79,12 +83,14 @@ export function InRoomSetupBody({
         }
       />
       <RostersGrid>
-        <RosterPanel
-          title={t("players")}
-          users={players}
+        <PlayersRosterPanel
+          room={room}
           ownerUserId={room.ownerUserId}
           canKick={isOwner}
+          canAddAi={isOwner}
+          isAddingAi={isAddingAi}
           onKick={onKick}
+          onAddAi={onAddAi}
         />
         <RosterPanel
           title={t("viewersTitle")}

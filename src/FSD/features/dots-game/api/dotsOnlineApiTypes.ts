@@ -19,6 +19,13 @@ export type DotsRoomSlot = PlayerId | "viewer";
 export type DotsOnlineUser = Readonly<{
   userId: string;
   displayName: string;
+  isAi?: boolean;
+}>;
+
+/** Response from `POST /rooms/:roomId/ai`. */
+export type AddAiResult = Readonly<{
+  modelName: string;
+  room: DotsRoomDetail;
 }>;
 
 /** Locked player user ids for an in-progress or finished game. */

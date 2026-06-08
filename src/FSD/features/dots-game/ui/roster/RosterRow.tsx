@@ -3,10 +3,11 @@
 import type { ReactElement } from "react";
 
 import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
+import { Icon } from "@/FSD/shared/ui/icon/Icon";
 
 import styles from "./RosterRow.module.css";
 
-export type RosterUser = Readonly<{ userId: string; displayName: string }>;
+export type RosterUser = Readonly<{ userId: string; displayName: string; isAi?: boolean }>;
 
 export type RosterRowProps = Readonly<{
   user: RosterUser;
@@ -21,6 +22,7 @@ export function RosterRow({ user, isOwner, canKick, kickLabel, onKick }: RosterR
   return (
     <li className={styles.rosterRow}>
       <span className={styles.rosterMain}>
+        {user.isAi ? <Icon iconName="ai" size="sm" /> : null}
         <span>{user.displayName}</span>
         {isOwner ? <span className={styles.ownerBadge}>★</span> : null}
       </span>

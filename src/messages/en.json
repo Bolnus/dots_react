@@ -73,6 +73,8 @@
     "viewersTitle": "Viewers",
     "viewersCount": "{count} watching",
     "playerCount": "{filled}/{total}",
+    "addAi": "Add AI",
+    "addingAi": "Adding AI…",
     "kick": "Kick",
     "leaveRoom": "Leave room",
     "password": "Password",

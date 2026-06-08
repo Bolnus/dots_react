@@ -1,0 +1,24 @@
+.addAiRow {
+  list-style: none;
+}
+
+.addAiButton {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addAiButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.addAiButton:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}

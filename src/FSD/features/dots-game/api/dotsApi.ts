@@ -1,4 +1,5 @@
 import type {
+  AddAiResult,
   CommitActionRequest,
   CommitActionResult,
   CreateRoomRequest,
@@ -101,6 +102,12 @@ export async function leaveRoom(roomId: string): Promise<void> {
 /** Starts the game when two players are present. */
 export async function startGame(roomId: string): Promise<DotsRoomDetail> {
   const { data } = await dotsHttp.post<DotsRoomDetail>(`/rooms/${roomId}/start`);
+  return data;
+}
+
+/** Adds an AI opponent to the second player slot. */
+export async function addAiPlayer(roomId: string): Promise<AddAiResult> {
+  const { data } = await dotsHttp.post<AddAiResult>(`/rooms/${roomId}/ai`);
   return data;
 }
 

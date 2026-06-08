@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 
 import type { LeaveRoomRequest } from "../../../api/dotsOnlineApiTypes";
+import { useAddAiMutation } from "../../../api/useAddAiMutation";
+import { useDotsApiErrors } from "../../../api/useDotsApiErrors";
 import { useLeaveRoomMutation } from "../../../api/useLeaveRoomMutation";
 import { useRoomLive } from "../../../api/useRoomLive";
 import { useStartGameMutation } from "../../../api/useStartGameMutation";
@@ -14,6 +16,8 @@ import styles from "./DotsOnlineRoomSetup.module.css";
 import { InRoomSetupBody } from "./InRoomSetupBody";
 import { requestStartGame, submitDraft } from "./roomSetupUtils";
 import type { DotsOnlineRoomSetupProps, DraftFormState } from "./types";
+import { InfoModal } from "@/FSD/shared/ui/info-modal/InfoModal";
+import { useTranslations } from "next-intl";
 
 /** Leaves the waiting room or navigates back when still in draft mode. */
 function requestLeave({
@@ -41,6 +45,7 @@ function requestLeave({
 
 /** Online configuration view: in draft mode shows "Create room"; in in-room mode shows roster + "Start game". */
 export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactElement {
+  const t = useTranslations("DotsGame");
   const defaults = useMemo(() => defaultDotsConfig(), []);
   const [draft, setDraft] = useState<DraftFormState>(() => ({
     name: "",
@@ -55,6 +60,8 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
   const { room } = live;
 
   const { mutate: updateRoom } = useUpdateRoomMutation();
+  const { mutate: addAi, error: addAiError, reset: resetAddAi, isPending: isAddingAi } = useAddAiMutation();
+  const { errorMessage, clearError, reportError } = useDotsApiErrors();
   const { mutate: startGame, error: startMutationError, reset: resetStart } = useStartGameMutation();
   const {
     mutate: leaveRoom,
@@ -75,6 +82,13 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
       resetStart();
     }
   }, [startMutationError, resetStart]);
+
+  useEffect(() => {
+    if (addAiError) {
+      reportError(addAiError);
+      resetAddAi();
+    }
+  }, [addAiError, reportError, resetAddAi]);
 
   useEffect(() => {
     if (didLeaveSucceed) {
@@ -101,16 +115,27 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
   }
 
   return (
-    <InRoomSetupBody
-      room={room}
-      userId={userId}
-      defaults={defaults}
-      isLeaving={isLeaving}
-      onBack={() => requestLeave({ isLeaving, roomId, userId, onBack, leaveRoom })}
-      onStart={() => requestStartGame({ roomId: room.id, userId, setStartError, startGame })}
-      onPatch={(patch) => updateRoom({ roomId: room.id, request: { byUserId: userId, ...patch } })}
-      onKick={(kickUserId) => updateRoom({ roomId: room.id, request: { byUserId: userId, kickUserId } })}
-      startError={startError}
-    />
+    <>
+      <InfoModal
+        isOpen={errorMessage !== null}
+        title={t("errorTitle")}
+        message={errorMessage ?? ""}
+        buttonLabel={t("errorOk")}
+        onClose={clearError}
+      />
+      <InRoomSetupBody
+        room={room}
+        userId={userId}
+        defaults={defaults}
+        isLeaving={isLeaving}
+        isAddingAi={isAddingAi}
+        onBack={() => requestLeave({ isLeaving, roomId, userId, onBack, leaveRoom })}
+        onStart={() => requestStartGame({ roomId: room.id, userId, setStartError, startGame })}
+        onPatch={(patch) => updateRoom({ roomId: room.id, request: { byUserId: userId, ...patch } })}
+        onKick={(kickUserId) => updateRoom({ roomId: room.id, request: { byUserId: userId, kickUserId } })}
+        onAddAi={() => addAi(room.id)}
+        startError={startError}
+      />
+    </>
   );
 }

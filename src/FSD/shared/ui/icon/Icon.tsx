@@ -261,6 +261,37 @@ function PencilIcon({ color, title, size }: SvgIconProps): ReactElement {
   );
 }
 
+/** AI opponent badge (stroke inherits `currentColor`). */
+function AiIcon({ color, title, size }: SvgIconProps): ReactElement {
+  const px = getSvgBoxPixels(size);
+  const style: CSSProperties | undefined = color ? { color } : undefined;
+  const svg = (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={styles.svgGlyph}
+      style={style}
+      aria-hidden={title === undefined ? true : undefined}
+    >
+      <rect x="5" y="5" width="14" height="14" rx="3" stroke="currentColor" strokeWidth="2" />
+      <path d="M9 10h.01M12 10h.01M15 10h.01M9 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+
+  if (title === undefined) {
+    return svg;
+  }
+
+  return (
+    <span className={styles.svgGlyphWrap} role="img" aria-label={title} title={title}>
+      {svg}
+    </span>
+  );
+}
+
 /** Plus glyph used for primary "add" actions (rooms, items). */
 function PlusIcon({ color, title, size }: SvgIconProps): ReactElement {
   const px = getSvgBoxPixels(size);
@@ -319,6 +350,9 @@ function FetchingIcon({ color, title, size }: SvgIconProps): ReactElement {
 
 /** Single entry point for glyphs used in buttons and inline UI. */
 export function Icon(props: IconProps): ReactElement {
+  if (props.iconName === "ai") {
+    return <AiIcon color={props.color} title={props.title} size={props.size} />;
+  }
   if (props.iconName === "close") {
     return <CloseIcon color={props.color} title={props.title} size={props.size} />;
   }

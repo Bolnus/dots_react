@@ -297,6 +297,16 @@ function formatWinnerOverlay(
   return formatWinnerText(t, winner, surrenderedBy, playerLabels);
 }
 
+/** Wraper div classname */
+function getWrapClassName(preview: boolean): string {
+  return preview ? `${styles.wrap} ${styles.previewWrap}` : styles.wrap;
+}
+
+/** Board classname */
+function getBoardClassName(preview: boolean): string {
+  return preview ? `${styles.board} ${styles.boardPreview}` : styles.board;
+}
+
 export type DotsBoardViewProps = Readonly<{
   /** Optional explicit config; falls back to `game.state.config`. */
   config?: DotsGameConfig;
@@ -376,11 +386,8 @@ export function DotsBoardView({
   const chainPathDotKeys = useMemo(() => buildChainPathDotKeys(mode, chainPath), [mode, chainPath]);
   const previewStroke = previewStrokeForChain(mode, state.chainStart, state.cells);
 
-  const wrapClassName = preview ? `${styles.wrap} ${styles.previewWrap}` : styles.wrap;
-  const boardClassName = preview ? `${styles.board} ${styles.boardPreview}` : styles.board;
-
   return (
-    <div className={wrapClassName}>
+    <div className={getWrapClassName(preview)}>
       {preview ? null : (
         <DotsBoardChrome
           t={t}
@@ -404,7 +411,7 @@ export function DotsBoardView({
       <div ref={boardWrapRef} className={styles.boardWrap}>
         <div
           ref={boardRef}
-          className={boardClassName}
+          className={getBoardClassName(preview)}
           style={{ width, height }}
           onMouseDown={
             isInteractive

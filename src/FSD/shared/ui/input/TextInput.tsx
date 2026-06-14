@@ -7,6 +7,7 @@ import { ButtonIcon } from "../button-icon/ButtonIcon";
 interface TextInputProps {
   value: string;
   onChange?: (str: string) => void;
+  onEnterKeyUp?: () => void;
   isClearable?: boolean;
   disabled?: boolean;
   className?: string;
@@ -31,10 +32,19 @@ function onClearInput(onChange?: (str: string) => void): void {
   onChange?.("");
 }
 
+/** Invokes `onEnterKeyUp` when the Enter key is released. */
+function onInputKeyUp(localEvent: React.KeyboardEvent<HTMLInputElement>, onEnterKeyUp?: () => void): void {
+  if (localEvent.key !== "Enter") {
+    return;
+  }
+  onEnterKeyUp?.();
+}
+
 /** Controlled text field with optional clear and password-visibility controls. */
 export function TextInput({
   value,
   onChange,
+  onEnterKeyUp,
   isClearable,
   className,
   disabled,
@@ -61,6 +71,9 @@ export function TextInput({
         value={isFetching ? "" : value}
         onChange={(localEvent: React.ChangeEvent<HTMLInputElement>) =>
           !isFetching && onInputChange(localEvent, onChange)
+        }
+        onKeyUp={(localEvent: React.KeyboardEvent<HTMLInputElement>) =>
+          !isFetching && onInputKeyUp(localEvent, onEnterKeyUp)
         }
         className={`${classes.textInput__input} commonInput`}
         disabled={disabled || isFetching}

@@ -25,10 +25,12 @@
   flex-direction: column;
   width: 100%;
   min-height: 0;
+  height: 100%;
 }
 
 .primarySlot {
   min-width: 0;
+  height: 100%;
 }
 
 .secondarySlot {
@@ -49,6 +51,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  height: 100%;
 }
 
 @media (min-width: 900px) {
@@ -58,10 +61,6 @@
 }
 
 @media (max-width: 899px) {
-  .rootNarrow .secondarySlot {
-    flex: 1;
-  }
-
   .rootNarrow .secondaryPanel {
     min-height: calc(100dvh - 120px);
   }

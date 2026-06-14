@@ -52,6 +52,7 @@ export function ChatComposer({ disabled = false, isSending, onSend, onTyping }: 
         disabled={disabled || isSending}
         placeholder={t("chatPlaceholder")}
         onChange={(value) => handleComposerChange(value, setDraft, onTyping)}
+        onEnterKeyUp={() => handleComposerSend(canSend, trimmed, onSend, setDraft)}
       />
       <ButtonIcon
         iconName="send"

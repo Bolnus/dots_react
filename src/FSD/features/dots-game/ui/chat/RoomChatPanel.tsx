@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement, RefObject } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type { UseRoomChatResult } from "../../api/roomChatTypes";
@@ -20,15 +20,50 @@ export type RoomChatPanelProps = Readonly<{
   chat: UseRoomChatResult;
 }>;
 
-/** Scrolls the message list to the bottom when new messages arrive. */
-function useScrollToBottom(listRef: RefObject<HTMLDivElement | null>, messageCount: number): void {
-  useEffect(() => {
+/** Scrolls the message list to the bottom when messages load or grow. */
+function useScrollToBottom(
+  listRef: RefObject<HTMLDivElement | null>,
+  messageCount: number,
+  isReady: boolean
+): boolean {
+  const [canLoadOlder, setCanLoadOlder] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!isReady) {
+      setCanLoadOlder(false);
+      return;
+    }
     const el = listRef.current;
     if (!el) {
       return;
     }
     el.scrollTop = el.scrollHeight;
-  }, [messageCount, listRef]);
+    setCanLoadOlder(true);
+  }, [messageCount, isReady, listRef]);
+
+  // Panel may mount hidden (display: none); scroll once it becomes visible.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || !isReady) {
+      return undefined;
+    }
+
+    let hadVisibleHeight = el.clientHeight > 0;
+
+    const observer = new ResizeObserver(() => {
+      const hasVisibleHeight = el.clientHeight > 0;
+      if (!hadVisibleHeight && hasVisibleHeight) {
+        el.scrollTop = el.scrollHeight;
+        setCanLoadOlder(true);
+      }
+      hadVisibleHeight = hasVisibleHeight;
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isReady, listRef]);
+
+  return canLoadOlder;
 }
 
 /** Chat message list and composer (layout-agnostic body). */
@@ -40,12 +75,12 @@ export function RoomChatPanel({ userId, opponentUserId, readOnly = false, chat }
   const typingNames = chat.typingUsers.map((entry) => entry.displayName);
   const { loadOlderMessages, hasMoreBefore, isFetchingOlder } = chat;
 
-  useScrollToBottom(listRef, chat.messages.length);
+  const canLoadOlder = useScrollToBottom(listRef, chat.messages.length, !chat.isLoading);
 
   const isTopSentinelIntersecting = useIntersectionObserver({
     sentinelRef: topSentinelRef,
     rootRef: listRef,
-    enabled: hasMoreBefore && !isFetchingOlder
+    enabled: hasMoreBefore && !isFetchingOlder && canLoadOlder
   });
 
   useEffect(() => {

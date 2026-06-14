@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 
-import type { DotsChatMessage, DotsChatReadState, DotsRoomEvent } from "./dotsOnlineApiTypes";
+import type { DotsChatMessage, DotsChatReadState, DotsRoomEvent, ListChatMessagesResult } from "./dotsOnlineApiTypes";
 import { fetchChatMessages, postChatMessage, postChatRead } from "./dotsApi";
 import { sendChatTyping, subscribeDotsRoom } from "./dotsRealtime";
 import { DOTS_QUERY_KEYS } from "./queryKeys";
@@ -24,6 +24,14 @@ function mergeMessages(existing: readonly DotsChatMessage[], incoming: readonly 
     byId.set(message.id, message);
   }
   return [...byId.values()].sort((a, b) => a.createdAtMs - b.createdAtMs);
+}
+
+/** Flattens all fetched chat pages into one ascending message list. */
+function flattenPagedMessages(pages: readonly ListChatMessagesResult[]): DotsChatMessage[] {
+  return mergeMessages(
+    [],
+    pages.flatMap((page) => page.messages)
+  );
 }
 
 /** Applies a chat read event to the previous read state list. */
@@ -111,26 +119,39 @@ function useRoomChatEvents(
 export function useRoomChat(roomId: string | null, userId: string, isSecondaryVisible: boolean): UseRoomChatResult {
   const [messages, setMessages] = useState<DotsChatMessage[]>([]);
   const [readStates, setReadStates] = useState<DotsChatReadState[]>([]);
-  const [hasMoreBefore, setHasMoreBefore] = useState(false);
-  const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [lastMarkedReadAt, setLastMarkedReadAt] = useState(0);
   const lastTypingSentAtRef = useRef(0);
 
-  const { isLoading, data } = useQuery({
+  const { isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, data } = useInfiniteQuery({
     queryKey: DOTS_QUERY_KEYS.chatMessages(roomId ?? ""),
-    queryFn: () => fetchChatMessages(roomId!),
+    queryFn: ({ pageParam }) => fetchChatMessages(roomId!, pageParam !== undefined ? { beforeMs: pageParam } : {}),
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.hasMoreBefore) {
+        return undefined;
+      }
+      return lastPage.messages[0]?.createdAtMs;
+    },
     enabled: roomId !== null
   });
+
+  useEffect(() => {
+    setMessages([]);
+    setReadStates([]);
+    setTypingUsers([]);
+    setLastMarkedReadAt(0);
+  }, [roomId]);
 
   useEffect(() => {
     if (!data) {
       return;
     }
-    setMessages([...data.messages]);
-    setReadStates([...data.readStates]);
-    setHasMoreBefore(data.hasMoreBefore);
-    const ownRead = data.readStates.find((state) => state.userId === userId)?.lastReadAtMs ?? 0;
+    const pagedMessages = flattenPagedMessages(data.pages);
+    setMessages((prev) => mergeMessages(pagedMessages, prev));
+    const snapshot = data.pages[0]?.readStates ?? [];
+    setReadStates((prev) => mergeReadStates(prev, snapshot));
+    const ownRead = snapshot.find((state) => state.userId === userId)?.lastReadAtMs ?? 0;
     setLastMarkedReadAt(ownRead);
   }, [data, userId]);
 
@@ -169,21 +190,11 @@ export function useRoomChat(roomId: string | null, userId: string, isSecondaryVi
   }, [isSecondaryVisible, lastMessageAt, lastMarkedReadAt, roomId, markReadMutate]);
 
   const loadOlderMessages = useCallback((): void => {
-    const [oldest] = messages;
-    if (!roomId || !hasMoreBefore || isFetchingOlder || oldest === undefined) {
+    if (!hasNextPage || isFetchingNextPage) {
       return;
     }
-    setIsFetchingOlder(true);
-    void fetchChatMessages(roomId, { beforeMs: oldest.createdAtMs })
-      .then((result) => {
-        setMessages((prev) => mergeMessages(result.messages, prev));
-        setHasMoreBefore(result.hasMoreBefore);
-        setReadStates((prev) => mergeReadStates(prev, result.readStates));
-      })
-      .finally(() => {
-        setIsFetchingOlder(false);
-      });
-  }, [roomId, hasMoreBefore, isFetchingOlder, messages]);
+    void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const sendMessage = (content: string): void => {
     if (!roomId) {
@@ -207,9 +218,9 @@ export function useRoomChat(roomId: string | null, userId: string, isSecondaryVi
   return {
     messages,
     readStates,
-    hasMoreBefore,
+    hasMoreBefore: hasNextPage ?? false,
     isLoading,
-    isFetchingOlder,
+    isFetchingOlder: isFetchingNextPage,
     isSending,
     hasUnread,
     typingUsers,

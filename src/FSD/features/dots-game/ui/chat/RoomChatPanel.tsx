@@ -13,12 +13,26 @@ import { groupMessagesBySender } from "./chatMessageGroups";
 import { ChatTypingIndicator } from "./ChatTypingIndicator";
 import styles from "./RoomChatPanel.module.css";
 
-export type RoomChatPanelProps = Readonly<{
+type RoomChatPanelProps = Readonly<{
   userId: string;
   opponentUserId: string | null;
   readOnly?: boolean;
   chat: UseRoomChatResult;
 }>;
+
+/** Scrolls a message list when its container becomes visible after being hidden. */
+function scrollMessageListOnBecomeVisible(
+  element: HTMLDivElement,
+  hadVisibleHeight: boolean,
+  onBecomeVisible: () => void
+): boolean {
+  const hasVisibleHeight = element.clientHeight > 0;
+  if (!hadVisibleHeight && hasVisibleHeight) {
+    element.scrollTop = element.scrollHeight;
+    onBecomeVisible();
+  }
+  return hasVisibleHeight;
+}
 
 /** Scrolls the message list to the bottom when messages load or grow. */
 function useScrollToBottom(
@@ -51,12 +65,7 @@ function useScrollToBottom(
     let hadVisibleHeight = el.clientHeight > 0;
 
     const observer = new ResizeObserver(() => {
-      const hasVisibleHeight = el.clientHeight > 0;
-      if (!hadVisibleHeight && hasVisibleHeight) {
-        el.scrollTop = el.scrollHeight;
-        setCanLoadOlder(true);
-      }
-      hadVisibleHeight = hasVisibleHeight;
+      hadVisibleHeight = scrollMessageListOnBecomeVisible(el, hadVisibleHeight, () => setCanLoadOlder(true));
     });
 
     observer.observe(el);

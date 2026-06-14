@@ -20,7 +20,6 @@ import { RoomChatPanel } from "../chat/RoomChatPanel";
 import { DotsBoardView } from "../play/DotsBoardView";
 import styles from "./DotsOnlinePlay.module.css";
 import { useMediaMinWidth } from "@/FSD/shared/lib/hooks/useMediaMinWidth";
-import { Icon } from "@/FSD/shared/ui/icon/Icon";
 
 export type DotsOnlinePlayProps = Readonly<{
   room: DotsRoomDetail;
@@ -120,30 +119,6 @@ function resolveTabNavCallbacks(
   };
 }
 
-/** Builds the right-side status row for the board toolbar. */
-function buildExtraStatus(
-  statusText: string,
-  room: DotsRoomDetail,
-  viewerCount: number,
-  t: ReturnType<typeof useTranslations>
-): ReactElement {
-  return (
-    <div className={styles.statusBarRight}>
-      <span>{statusText}</span>
-      {room.status === "playing" || room.status === "finished" ? (
-        <span
-          className={styles.viewerBadge}
-          aria-label={t("viewersCount", { count: viewerCount })}
-          title={t("viewersBadgeAria")}
-        >
-          <Icon iconName="viewers" size="sm" />
-          <span>{viewerCount}</span>
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
 /** Online play wrapper: drives `DotsBoardView` with an owned board/chat tab layout. */
 export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnlinePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
@@ -170,7 +145,7 @@ export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnline
   const showPrimary = isWide || activeTab === "primary";
   const showSecondary = isWide || activeTab === "secondary";
   const { onChatView, onBoardView } = resolveTabNavCallbacks(isWide, activeTab, setActiveTab);
-  const extraStatus = buildExtraStatus(statusText, room, online.viewerCount, t);
+  const showViewerBadge = room.status === "playing" || room.status === "finished";
 
   return (
     <div className={isWide ? styles.rootWide : styles.rootNarrow}>
@@ -182,7 +157,11 @@ export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnline
           onExit={onExit}
           readOnly={isViewer}
           isMyTurn={online.isMyTurn}
-          extraStatus={extraStatus}
+          extraStatus={{
+            statusText,
+            showViewerBadge,
+            viewerCount: online.viewerCount
+          }}
           onChatView={onChatView}
           hasUnreadChat={chat.hasUnread}
         />

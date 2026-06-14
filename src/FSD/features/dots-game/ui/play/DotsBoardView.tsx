@@ -1,6 +1,6 @@
 "use client";
 
-import type { MouseEvent as ReactMouseEvent, ReactElement, ReactNode, RefObject } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactElement, RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 
@@ -26,6 +26,7 @@ import {
 } from "./DotsGameUtils";
 import { ExpandableEllipsisText } from "@/FSD/shared/ui/expandable-ellipsis-text/ExpandableEllipsisText";
 import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
+import { Icon } from "@/FSD/shared/ui/icon/Icon";
 import { ToolbarButton } from "@/FSD/shared/ui/toolbar-button/ToolbarButton";
 
 type DotsBoardT = (key: string, values?: Record<string, number>) => string;
@@ -198,6 +199,12 @@ function DotsBoardLayers({
   );
 }
 
+type DotsBoardExtraStatus = Readonly<{
+  statusText: string;
+  showViewerBadge: boolean;
+  viewerCount: number;
+}>;
+
 type DotsBoardChromeProps = Readonly<{
   t: DotsBoardT;
   playerLabels: Readonly<Record<PlayerId, string>>;
@@ -214,7 +221,7 @@ type DotsBoardChromeProps = Readonly<{
   onSurrender: () => void;
   hideAccept: boolean;
   hideSurrender: boolean;
-  extraStatus?: ReactNode;
+  extraStatus?: DotsBoardExtraStatus;
   onChatView?: () => void;
   hasUnreadChat?: boolean;
 }>;
@@ -260,7 +267,21 @@ function DotsBoardChrome({
               toggleAriaLabel={t("turnLineToggleAria")}
             />
           </div>
-          {extraStatus}
+          {extraStatus ? (
+            <div className={styles.statusBarRight}>
+              <span>{extraStatus.statusText}</span>
+              {extraStatus.showViewerBadge ? (
+                <span
+                  className={styles.viewerBadge}
+                  aria-label={t("viewersCount", { count: extraStatus.viewerCount })}
+                  title={t("viewersBadgeAria")}
+                >
+                  <Icon iconName="viewers" size="sm" />
+                  <span>{extraStatus.viewerCount}</span>
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         {onChatView ? (
           <div className={styles.toolbarEnd}>
@@ -338,8 +359,8 @@ export type DotsBoardViewProps = Readonly<{
   preview?: boolean;
   /** When true, board input + chrome buttons are disabled (used for viewer mode). */
   readOnly?: boolean;
-  /** Optional status node injected to the right of the toolbar (viewer badge etc.). */
-  extraStatus?: ReactNode;
+  /** Optional online status data rendered in the toolbar (viewer badge etc.). */
+  extraStatus?: DotsBoardExtraStatus;
   /** When set, a chat toggle button is shown in the toolbar. */
   onChatView?: () => void;
   /** Whether the chat toggle shows the unread icon variant. */

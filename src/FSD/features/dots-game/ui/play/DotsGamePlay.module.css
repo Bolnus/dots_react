@@ -67,6 +67,19 @@
   font-size: var(--font-size-base);
 }
 
+.statusBarRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
 .actions {
   display: flex;
   flex: 1 0 auto;

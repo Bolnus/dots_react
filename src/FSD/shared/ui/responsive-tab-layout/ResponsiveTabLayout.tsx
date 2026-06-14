@@ -3,12 +3,13 @@
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useState } from "react";
 
+import { useMediaMinWidth } from "@/FSD/shared/lib/hooks/useMediaMinWidth";
 import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
 import type { IconName } from "@/FSD/shared/ui/icon/IconTypes";
 
 import styles from "./ResponsiveTabLayout.module.css";
 
-export type ResponsiveTabLayoutProps = Readonly<{
+type ResponsiveTabLayoutProps = Readonly<{
   primary: ReactNode;
   secondary: ReactNode;
   secondaryHeader?: ReactNode;
@@ -21,21 +22,6 @@ export type ResponsiveTabLayoutProps = Readonly<{
 }>;
 
 type ActiveTab = "primary" | "secondary";
-
-/** Resolves whether the viewport is at or above the layout breakpoint. */
-function useWideLayout(breakpointPx: number): boolean {
-  const [isWide, setIsWide] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia(`(min-width: ${breakpointPx}px)`);
-    const update = (): void => setIsWide(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, [breakpointPx]);
-
-  return isWide;
-}
 
 type SecondaryHeaderProps = Readonly<{
   isWide: boolean;
@@ -86,7 +72,7 @@ export function ResponsiveTabLayout({
   breakpointPx = 900,
   onSecondaryVisibilityChange
 }: ResponsiveTabLayoutProps): ReactElement {
-  const isWide = useWideLayout(breakpointPx);
+  const isWide = useMediaMinWidth(breakpointPx);
   const [activeTab, setActiveTab] = useState<ActiveTab>("primary");
   const isSecondaryVisible = isWide || activeTab === "secondary";
 

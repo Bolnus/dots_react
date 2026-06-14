@@ -7,25 +7,12 @@ import type { DotsChatMessage, DotsChatReadState, DotsRoomEvent } from "./dotsOn
 import { fetchChatMessages, postChatMessage, postChatRead } from "./dotsApi";
 import { sendChatTyping, subscribeDotsRoom } from "./dotsRealtime";
 import { DOTS_QUERY_KEYS } from "./queryKeys";
+import type { UseRoomChatResult } from "./roomChatTypes";
 
 const TYPING_TTL_MS = 4000;
 const TYPING_SEND_MIN_INTERVAL_MS = 2000;
 
 type TypingUser = Readonly<{ userId: string; displayName: string; expiresAt: number }>;
-
-export type UseRoomChatResult = Readonly<{
-  messages: readonly DotsChatMessage[];
-  readStates: readonly DotsChatReadState[];
-  hasMoreBefore: boolean;
-  isLoading: boolean;
-  isFetchingOlder: boolean;
-  isSending: boolean;
-  hasUnread: boolean;
-  typingUsers: readonly TypingUser[];
-  loadOlderMessages: () => void;
-  sendMessage: (content: string) => void;
-  notifyTyping: () => void;
-}>;
 
 /** Merges messages by id, preserving ascending createdAt order. */
 function mergeMessages(existing: readonly DotsChatMessage[], incoming: readonly DotsChatMessage[]): DotsChatMessage[] {
@@ -39,42 +26,17 @@ function mergeMessages(existing: readonly DotsChatMessage[], incoming: readonly 
   return [...byId.values()].sort((a, b) => a.createdAtMs - b.createdAtMs);
 }
 
-/** Returns the latest read timestamp for a user from read states. */
-function readAtForUser(readStates: readonly DotsChatReadState[], userId: string): number {
-  return readStates.find((state) => state.userId === userId)?.lastReadAtMs ?? 0;
+/** Applies a chat read event to the previous read state list. */
+function applyChatReadUpdate(prev: DotsChatReadState[], userId: string, lastReadAtMs: number): DotsChatReadState[] {
+  const next = prev.filter((state) => state.userId !== userId);
+  return [...next, { userId, lastReadAtMs }];
 }
 
-/** Applies a chat message event to local message state. */
-function applyChatMessageEvent(
-  setMessages: Dispatch<SetStateAction<DotsChatMessage[]>>,
-  message: DotsChatMessage
-): void {
-  setMessages((prev) => mergeMessages(prev, [message]));
-}
-
-/** Applies a chat read event to local read state. */
-function applyChatReadEvent(
-  setReadStates: Dispatch<SetStateAction<DotsChatReadState[]>>,
-  userId: string,
-  lastReadAtMs: number
-): void {
-  setReadStates((prev) => {
-    const next = prev.filter((state) => state.userId !== userId);
-    return [...next, { userId, lastReadAtMs }];
-  });
-}
-
-/** Applies a chat typing event to local typing state. */
-function applyChatTypingEvent(
-  setTypingUsers: Dispatch<SetStateAction<TypingUser[]>>,
-  userId: string,
-  displayName: string
-): void {
+/** Applies a chat typing event to the previous typing user list. */
+function applyChatTypingUpdate(prev: TypingUser[], userId: string, displayName: string): TypingUser[] {
   const expiresAt = Date.now() + TYPING_TTL_MS;
-  setTypingUsers((prev) => {
-    const filtered = prev.filter((entry) => entry.userId !== userId);
-    return [...filtered, { userId, displayName, expiresAt }];
-  });
+  const filtered = prev.filter((entry) => entry.userId !== userId);
+  return [...filtered, { userId, displayName, expiresAt }];
 }
 
 /** Creates a room event handler for chat-specific WS events. */
@@ -87,15 +49,15 @@ function createChatEventHandler(
 ): (event: DotsRoomEvent) => void {
   return (event: DotsRoomEvent): void => {
     if (event.type === "CHAT_MESSAGE" && event.roomId === roomId) {
-      applyChatMessageEvent(setMessages, event.message);
+      setMessages((prev) => mergeMessages(prev, [event.message]));
       return;
     }
     if (event.type === "CHAT_READ" && event.roomId === roomId) {
-      applyChatReadEvent(setReadStates, event.userId, event.lastReadAtMs);
+      setReadStates((prev) => applyChatReadUpdate(prev, event.userId, event.lastReadAtMs));
       return;
     }
     if (event.type === "CHAT_TYPING" && event.roomId === roomId && event.userId !== userId) {
-      applyChatTypingEvent(setTypingUsers, event.userId, event.displayName);
+      setTypingUsers((prev) => applyChatTypingUpdate(prev, event.userId, event.displayName));
     }
   };
 }
@@ -115,6 +77,17 @@ function mergeReadStates(
 /** Removes expired typing entries. */
 function expireStaleTypers(prev: TypingUser[], now: number): TypingUser[] {
   return prev.filter((entry) => entry.expiresAt > now);
+}
+
+/** Updates local read state after a successful mark-read mutation. */
+function handleMarkReadSuccess(
+  userId: string,
+  setLastMarkedReadAt: Dispatch<SetStateAction<number>>,
+  setReadStates: Dispatch<SetStateAction<DotsChatReadState[]>>,
+  lastReadAtMs: number
+): void {
+  setLastMarkedReadAt(lastReadAtMs);
+  setReadStates((prev) => applyChatReadUpdate(prev, userId, lastReadAtMs));
 }
 
 /** Subscribes to room chat events and updates local chat state. */
@@ -167,26 +140,18 @@ export function useRoomChat(roomId: string | null, userId: string, isSecondaryVi
     if (typingUsers.length === 0) {
       return undefined;
     }
-    const timer = setInterval(() => {
-      const now = Date.now();
-      setTypingUsers((prev) => expireStaleTypers(prev, now));
-    }, 500);
+    const timer = setInterval(() => setTypingUsers((prev) => expireStaleTypers(prev, Date.now())), 500);
     return () => clearInterval(timer);
   }, [typingUsers.length]);
 
   const { mutate: sendMessageMutate, isPending: isSending } = useMutation({
     mutationFn: (content: string) => postChatMessage(roomId!, content),
-    onSuccess: (message) => {
-      applyChatMessageEvent(setMessages, message);
-    }
+    onSuccess: (message) => setMessages((prev) => mergeMessages(prev, [message]))
   });
 
   const { mutate: markReadMutate } = useMutation({
     mutationFn: (lastReadAtMs: number) => postChatRead(roomId!, lastReadAtMs),
-    onSuccess: (_void, lastReadAtMs) => {
-      setLastMarkedReadAt(lastReadAtMs);
-      applyChatReadEvent(setReadStates, userId, lastReadAtMs);
-    }
+    onSuccess: (_void, lastReadAtMs) => handleMarkReadSuccess(userId, setLastMarkedReadAt, setReadStates, lastReadAtMs)
   });
 
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
@@ -264,5 +229,5 @@ export function isOwnMessageRead(
   if (message.senderUserId !== ownUserId || opponentUserId === null) {
     return false;
   }
-  return readAtForUser(readStates, opponentUserId) >= message.createdAtMs;
+  return (readStates.find((state) => state.userId === opponentUserId)?.lastReadAtMs ?? 0) >= message.createdAtMs;
 }

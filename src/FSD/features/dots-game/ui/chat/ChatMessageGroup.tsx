@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import type { DotsChatReadState } from "../../api/dotsOnlineApiTypes";
 
 import { ChatMessageBubble } from "./ChatMessageBubble";
-import type { ChatMessageGroup as ChatMessageGroupType } from "./chatMessageGroups";
+import type { ChatMessageGroup as ChatMessageGroupType } from "./chatTypes";
 import { senderColorForKey } from "./senderColor";
 import styles from "./ChatMessageGroup.module.css";
 

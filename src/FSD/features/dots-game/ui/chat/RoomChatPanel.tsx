@@ -4,7 +4,8 @@ import type { ReactElement, RefObject } from "react";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
-import type { UseRoomChatResult } from "../../api/useRoomChat";
+import type { UseRoomChatResult } from "../../api/roomChatTypes";
+import { useIntersectionObserver } from "@/FSD/shared/lib/hooks/useIntersectionObserver";
 
 import { ChatComposer } from "./ChatComposer";
 import { ChatMessageGroup } from "./ChatMessageGroup";
@@ -41,25 +42,17 @@ export function RoomChatPanel({ userId, opponentUserId, readOnly = false, chat }
 
   useScrollToBottom(listRef, chat.messages.length);
 
+  const isTopSentinelIntersecting = useIntersectionObserver({
+    sentinelRef: topSentinelRef,
+    rootRef: listRef,
+    enabled: hasMoreBefore && !isFetchingOlder
+  });
+
   useEffect(() => {
-    const sentinel = topSentinelRef.current;
-    const root = listRef.current;
-    if (!sentinel || !root || !hasMoreBefore || isFetchingOlder) {
-      return undefined;
+    if (isTopSentinelIntersecting) {
+      loadOlderMessages();
     }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          loadOlderMessages();
-        }
-      },
-      { root, threshold: 0 }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasMoreBefore, isFetchingOlder, loadOlderMessages]);
+  }, [isTopSentinelIntersecting, loadOlderMessages]);
 
   return (
     <div className={styles.panel}>

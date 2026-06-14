@@ -1,11 +1,6 @@
 import type { DotsChatMessage } from "../../api/dotsOnlineApiTypes";
 
-export type ChatMessageGroup = Readonly<{
-  senderKey: string;
-  senderDisplayName: string;
-  senderKind: DotsChatMessage["senderKind"];
-  messages: readonly DotsChatMessage[];
-}>;
+import type { ChatMessageGroup } from "./chatTypes";
 
 /** Builds a stable sender key for grouping consecutive messages. */
 export function senderKeyForMessage(message: DotsChatMessage): string {

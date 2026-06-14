@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import type { Dispatch, ReactElement, SetStateAction } from "react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -10,12 +10,32 @@ import styles from "./ChatComposer.module.css";
 import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
 import { TextInput } from "@/FSD/shared/ui/input/TextInput";
 
-export type ChatComposerProps = Readonly<{
+type ChatComposerProps = Readonly<{
   disabled?: boolean;
   isSending: boolean;
   onSend: (content: string) => void;
   onTyping: () => void;
 }>;
+
+/** Updates draft text and notifies the parent that the user is typing. */
+function handleComposerChange(value: string, setDraft: Dispatch<SetStateAction<string>>, onTyping: () => void): void {
+  setDraft(value.slice(0, MAX_CHAT_MESSAGE_LENGTH));
+  onTyping();
+}
+
+/** Sends the current draft when allowed and clears the input. */
+function handleComposerSend(
+  canSend: boolean,
+  trimmed: string,
+  onSend: (content: string) => void,
+  setDraft: Dispatch<SetStateAction<string>>
+): void {
+  if (!canSend) {
+    return;
+  }
+  onSend(trimmed);
+  setDraft("");
+}
 
 /** Chat message input with send button. */
 export function ChatComposer({ disabled = false, isSending, onSend, onTyping }: ChatComposerProps): ReactElement {
@@ -31,10 +51,7 @@ export function ChatComposer({ disabled = false, isSending, onSend, onTyping }: 
         value={draft}
         disabled={disabled || isSending}
         placeholder={t("chatPlaceholder")}
-        onChange={(value) => {
-          setDraft(value.slice(0, MAX_CHAT_MESSAGE_LENGTH));
-          onTyping();
-        }}
+        onChange={(value) => handleComposerChange(value, setDraft, onTyping)}
       />
       <ButtonIcon
         iconName="send"
@@ -43,13 +60,7 @@ export function ChatComposer({ disabled = false, isSending, onSend, onTyping }: 
         title={t("chatSendAria")}
         disabled={!canSend}
         isFetching={isSending}
-        onClick={() => {
-          if (!canSend) {
-            return;
-          }
-          onSend(trimmed);
-          setDraft("");
-        }}
+        onClick={() => handleComposerSend(canSend, trimmed, onSend, setDraft)}
       />
     </div>
   );

@@ -7,7 +7,7 @@ import { Icon } from "@/FSD/shared/ui/icon/Icon";
 
 import styles from "./ChatPanelHeader.module.css";
 
-export type ChatPanelHeaderProps = Readonly<{
+type ChatPanelHeaderProps = Readonly<{
   opponentName: string;
   viewerCount: number;
 }>;

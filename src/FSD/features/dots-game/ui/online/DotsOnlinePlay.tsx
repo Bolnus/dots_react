@@ -19,14 +19,16 @@ import { ChatPanelHeader } from "../chat/ChatPanelHeader";
 import { RoomChatPanel } from "../chat/RoomChatPanel";
 import { DotsBoardView } from "../play/DotsBoardView";
 import styles from "./DotsOnlinePlay.module.css";
+import { useMediaMinWidth } from "@/FSD/shared/lib/hooks/useMediaMinWidth";
 import { Icon } from "@/FSD/shared/ui/icon/Icon";
-import { ResponsiveTabLayout } from "@/FSD/shared/ui/responsive-tab-layout/ResponsiveTabLayout";
 
 export type DotsOnlinePlayProps = Readonly<{
   room: DotsRoomDetail;
   userId: string;
   onExit: () => void;
 }>;
+
+type ActiveTab = "primary" | "secondary";
 
 type StatusTextArgs = Readonly<{
   room: DotsRoomDetail;
@@ -40,6 +42,8 @@ type ChatHeaderInfo = Readonly<{
   opponentName: string;
   opponentUserId: string | null;
 }>;
+
+const LAYOUT_BREAKPOINT_PX = 900;
 
 /** Resolves the user id for the player whose turn it currently is. */
 function actingPlayerUserId(room: DotsRoomDetail): string | null {
@@ -99,10 +103,53 @@ function chatHeaderInfo(room: DotsRoomDetail, userId: string): ChatHeaderInfo {
   return { opponentName: room.name, opponentUserId: null };
 }
 
-/** Online play wrapper: drives `DotsBoardView` with chat in a responsive tab layout. */
+type TabNavCallbacks = Readonly<{
+  onChatView?: () => void;
+  onBoardView?: () => void;
+}>;
+
+/** Resolves narrow-layout tab switch callbacks; undefined hides the corresponding button. */
+function resolveTabNavCallbacks(
+  isWide: boolean,
+  activeTab: ActiveTab,
+  setActiveTab: (tab: ActiveTab) => void
+): TabNavCallbacks {
+  return {
+    onChatView: !isWide && activeTab === "primary" ? () => setActiveTab("secondary") : undefined,
+    onBoardView: !isWide && activeTab === "secondary" ? () => setActiveTab("primary") : undefined
+  };
+}
+
+/** Builds the right-side status row for the board toolbar. */
+function buildExtraStatus(
+  statusText: string,
+  room: DotsRoomDetail,
+  viewerCount: number,
+  t: ReturnType<typeof useTranslations>
+): ReactElement {
+  return (
+    <div className={styles.statusBarRight}>
+      <span>{statusText}</span>
+      {room.status === "playing" || room.status === "finished" ? (
+        <span
+          className={styles.viewerBadge}
+          aria-label={t("viewersCount", { count: viewerCount })}
+          title={t("viewersBadgeAria")}
+        >
+          <Icon iconName="viewers" size="sm" />
+          <span>{viewerCount}</span>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** Online play wrapper: drives `DotsBoardView` with an owned board/chat tab layout. */
 export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnlinePlayProps): ReactElement {
   const t = useTranslations("DotsGame");
-  const [isSecondaryVisible, setIsSecondaryVisible] = useState(false);
+  const isWide = useMediaMinWidth(LAYOUT_BREAKPOINT_PX);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("primary");
+  const isSecondaryVisible = isWide || activeTab === "secondary";
   const { room: liveRoom, isConnected, applyRoomSnapshot } = useRoomLive(initialRoom.id);
   const room = liveRoom ?? initialRoom;
   const send = useSendGameAction(room.id);
@@ -120,26 +167,14 @@ export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnline
   const isViewer = role === "viewer";
   const statusText = computeStatusText({ room, isViewer, isMyTurn: online.isMyTurn, isConnected, t });
   const { opponentName, opponentUserId } = chatHeaderInfo(room, userId);
-
-  const extraStatus = (
-    <div className={styles.statusBarRight}>
-      <span>{statusText}</span>
-      {room.status === "playing" || room.status === "finished" ? (
-        <span
-          className={styles.viewerBadge}
-          aria-label={t("viewersCount", { count: online.viewerCount })}
-          title={t("viewersBadgeAria")}
-        >
-          <Icon iconName="viewers" size="sm" />
-          <span>{online.viewerCount}</span>
-        </span>
-      ) : null}
-    </div>
-  );
+  const showPrimary = isWide || activeTab === "primary";
+  const showSecondary = isWide || activeTab === "secondary";
+  const { onChatView, onBoardView } = resolveTabNavCallbacks(isWide, activeTab, setActiveTab);
+  const extraStatus = buildExtraStatus(statusText, room, online.viewerCount, t);
 
   return (
-    <ResponsiveTabLayout
-      primary={
+    <div className={isWide ? styles.rootWide : styles.rootNarrow}>
+      <div className={showPrimary ? styles.primarySlot : styles.hiddenSlot}>
         <DotsBoardView
           config={toClientGameConfig(room.config)}
           playerLabels={online.playerLabels}
@@ -148,15 +183,16 @@ export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnline
           readOnly={isViewer}
           isMyTurn={online.isMyTurn}
           extraStatus={extraStatus}
+          onChatView={onChatView}
+          hasUnreadChat={chat.hasUnread}
         />
-      }
-      secondaryHeader={<ChatPanelHeader opponentName={opponentName} viewerCount={online.viewerCount} />}
-      secondary={<RoomChatPanel userId={userId} opponentUserId={opponentUserId} readOnly={isViewer} chat={chat} />}
-      openSecondaryIcon={chat.hasUnread ? "chatUnread" : "chat"}
-      openPrimaryIcon="board"
-      openSecondaryAriaLabel={t("chatToggleAria")}
-      openPrimaryAriaLabel={t("gameToggleAria")}
-      onSecondaryVisibilityChange={setIsSecondaryVisible}
-    />
+      </div>
+      <div className={showSecondary ? styles.secondarySlot : styles.hiddenSlot}>
+        <div className={styles.secondaryPanel}>
+          <ChatPanelHeader opponentName={opponentName} viewerCount={online.viewerCount} onBoardView={onBoardView} />
+          <RoomChatPanel userId={userId} opponentUserId={opponentUserId} readOnly={isViewer} chat={chat} />
+        </div>
+      </div>
+    </div>
   );
 }

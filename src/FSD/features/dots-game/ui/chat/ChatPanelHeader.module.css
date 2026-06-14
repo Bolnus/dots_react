@@ -7,6 +7,23 @@
   font-size: var(--font-size-secondary);
 }
 
+.desktopRoot {
+  margin-bottom: 8px;
+}
+
+.mobileNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.headerSlot {
+  flex: 1;
+  min-width: 0;
+}
+
 .opponentName {
   color: #ef4444;
   font-weight: 600;

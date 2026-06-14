@@ -25,6 +25,7 @@ import {
   previewStrokeForChain
 } from "./DotsGameUtils";
 import { ExpandableEllipsisText } from "@/FSD/shared/ui/expandable-ellipsis-text/ExpandableEllipsisText";
+import { ButtonIcon } from "@/FSD/shared/ui/button-icon/ButtonIcon";
 import { ToolbarButton } from "@/FSD/shared/ui/toolbar-button/ToolbarButton";
 
 type DotsBoardT = (key: string, values?: Record<string, number>) => string;
@@ -214,6 +215,8 @@ type DotsBoardChromeProps = Readonly<{
   hideAccept: boolean;
   hideSurrender: boolean;
   extraStatus?: ReactNode;
+  onChatView?: () => void;
+  hasUnreadChat?: boolean;
 }>;
 
 /** Scores, turn line, and action buttons (not shown in setup preview). */
@@ -233,28 +236,43 @@ function DotsBoardChrome({
   onSurrender,
   hideAccept,
   hideSurrender,
-  extraStatus
+  extraStatus,
+  onChatView,
+  hasUnreadChat = false
 }: DotsBoardChromeProps): ReactElement {
   return (
     <>
       <div className={styles.toolbar}>
-        <div className={styles.scores}>
-          <span className={styles.scoreP0}>
-            {playerLabels.player0}: {scores.player0}
-          </span>
-          <span className={styles.scoreP1}>
-            {playerLabels.player1}: {scores.player1}
-          </span>
+        <div className={styles.toolbarMain}>
+          <div className={styles.scores}>
+            <span className={styles.scoreP0}>
+              {playerLabels.player0}: {scores.player0}
+            </span>
+            <span className={styles.scoreP1}>
+              {playerLabels.player1}: {scores.player1}
+            </span>
+          </div>
+          <div className={styles.turnSlot}>
+            <ExpandableEllipsisText
+              className={styles.turnLine}
+              prefix={t("statusLabel")}
+              text={turnLabel}
+              toggleAriaLabel={t("turnLineToggleAria")}
+            />
+          </div>
+          {extraStatus}
         </div>
-        <div className={styles.turnSlot}>
-          <ExpandableEllipsisText
-            className={styles.turnLine}
-            prefix={t("statusLabel")}
-            text={turnLabel}
-            toggleAriaLabel={t("turnLineToggleAria")}
-          />
-        </div>
-        {extraStatus}
+        {onChatView ? (
+          <div className={styles.toolbarEnd}>
+            <ButtonIcon
+              iconName={hasUnreadChat ? "chatUnread" : "chat"}
+              iconColor="#ef4444"
+              background="ghost"
+              title={t("chatToggleAria")}
+              onClick={onChatView}
+            />
+          </div>
+        ) : null}
       </div>
       <div className={styles.actions}>
         {hideAccept ? null : (
@@ -322,6 +340,10 @@ export type DotsBoardViewProps = Readonly<{
   readOnly?: boolean;
   /** Optional status node injected to the right of the toolbar (viewer badge etc.). */
   extraStatus?: ReactNode;
+  /** When set, a chat toggle button is shown in the toolbar. */
+  onChatView?: () => void;
+  /** Whether the chat toggle shows the unread icon variant. */
+  hasUnreadChat?: boolean;
   /** Hide the Accept button (e.g. online flows that auto-commit). */
   hideAccept?: boolean;
   /** Hide the Surrender button (e.g. preview / viewer / hot-seat-keeps-it). */
@@ -340,6 +362,8 @@ export function DotsBoardView({
   preview = false,
   readOnly = false,
   extraStatus,
+  onChatView,
+  hasUnreadChat = false,
   hideAccept = false,
   hideSurrender = false,
   isMyTurn = true
@@ -406,6 +430,8 @@ export function DotsBoardView({
           hideAccept={hideAccept || readOnly}
           hideSurrender={hideSurrender || readOnly}
           extraStatus={extraStatus}
+          onChatView={onChatView}
+          hasUnreadChat={hasUnreadChat}
         />
       )}
       <div ref={boardWrapRef} className={styles.boardWrap}>

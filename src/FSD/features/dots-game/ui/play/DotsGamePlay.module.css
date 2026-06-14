@@ -26,7 +26,20 @@
 }
 
 .toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 14px;
+}
+
+.toolbarMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbarEnd {
+  flex-shrink: 0;
 }
 
 .scores {

@@ -1,0 +1,35 @@
+.groupOwn,
+.groupOther {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.groupOwn {
+  align-items: flex-end;
+}
+
+.groupOther {
+  align-items: flex-start;
+}
+
+.senderName {
+  font-weight: 600;
+  font-size: var(--font-size-secondary);
+}
+
+.bubbles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.groupOwn .bubbles {
+  align-items: flex-end;
+}
+
+.groupOther .bubbles {
+  align-items: flex-start;
+}

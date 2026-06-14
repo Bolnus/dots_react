@@ -1,0 +1,30 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  padding: 12px;
+}
+
+.messageList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.topSentinel {
+  height: 1px;
+}
+
+.loading,
+.loadingOlder {
+  color: var(--text-muted);
+  font-size: var(--font-size-secondary);
+  text-align: center;
+  padding: 8px 0;
+}

@@ -2,6 +2,9 @@ import type { UiSize } from "../../lib/common/types";
 
 export type IconName =
   | "ai"
+  | "board"
+  | "chat"
+  | "chatUnread"
   | "close"
   | "fetching"
   | "hamburger"
@@ -9,6 +12,7 @@ export type IconName =
   | "lock"
   | "pencil"
   | "plus"
+  | "send"
   | "show"
   | "viewers";
 

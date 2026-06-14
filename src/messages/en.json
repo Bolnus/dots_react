@@ -99,7 +99,22 @@
     "serverRejected": "Server rejected the move",
     "youAreOwnerHint": "You are the room owner",
     "youAreViewerHint": "You joined as a viewer",
-    "leave": "Leave"
+    "leave": "Leave",
+    "chatToggleAria": "Open chat",
+    "gameToggleAria": "Return to game",
+    "chatPlaceholder": "Message…",
+    "chatSendAria": "Send message",
+    "chatHeaderViewers": "{count} watching",
+    "chatDelivered": "Delivered",
+    "chatRead": "Read",
+    "chatTypingOne": "{name} is typing…",
+    "chatTypingMany": "{names} are typing…",
+    "chatSenderAi": "AI",
+    "chatSenderViewer": "Viewer",
+    "chatSenderPlayer": "Player",
+    "chatMessagesAria": "Chat messages",
+    "chatLoading": "Loading chat…",
+    "chatLoadingOlder": "Loading older messages…"
   },
   "games": {
     "dots": {

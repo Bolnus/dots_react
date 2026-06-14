@@ -1,0 +1,12 @@
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+}

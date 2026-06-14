@@ -78,14 +78,23 @@ function onWebSocketOpen(token: string): void {
   onSocketOpen(token);
 }
 
+/** Resolves the room id from any dots room event shape. */
+function roomIdFromEvent(event: DotsRoomEvent): string | undefined {
+  if (event.type === "CHAT_MESSAGE" || event.type === "CHAT_READ" || event.type === "CHAT_TYPING") {
+    return event.roomId;
+  }
+  return event.room?.id;
+}
+
 /** Dispatches a parsed room event to all listeners for that room. */
 function onSocketMessage(event: MessageEvent): void {
   try {
     const parsed = JSON.parse(String(event.data)) as DotsRoomEvent;
-    if (!parsed.room?.id) {
+    const roomId = roomIdFromEvent(parsed);
+    if (!roomId) {
       return;
     }
-    const listeners = roomListeners.get(parsed.room.id);
+    const listeners = roomListeners.get(roomId);
     if (!listeners) {
       return;
     }
@@ -200,4 +209,10 @@ export function subscribeDotsRoom(roomId: string, listener: RoomListener): () =>
 export function sendDotsPresence(roomId: string, patch: DotsLocalState): void {
   ensureSocket();
   sendJson({ type: "PRESENCE", roomId, patch });
+}
+
+/** Sends an ephemeral chat typing indicator. */
+export function sendChatTyping(roomId: string): void {
+  ensureSocket();
+  sendJson({ type: "CHAT_TYPING", roomId });
 }

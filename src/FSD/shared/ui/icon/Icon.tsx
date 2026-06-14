@@ -322,6 +322,122 @@ function PlusIcon({ color, title, size }: SvgIconProps): ReactElement {
   );
 }
 
+/** Speech bubble outline for chat actions. */
+function ChatIcon({ color, title, size }: SvgIconProps): ReactElement {
+  const px = getSvgBoxPixels(size);
+  const style: CSSProperties | undefined = color ? { color } : undefined;
+  const svg = (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={styles.svgGlyph}
+      style={style}
+      aria-hidden={title === undefined ? true : undefined}
+    >
+      <path
+        d="M7 18.5V20l2.2-1.5H17a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7.5a3 3 0 0 0 3 3Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
+  if (title === undefined) {
+    return svg;
+  }
+
+  return (
+    <span className={styles.svgGlyphWrap} role="img" aria-label={title} title={title}>
+      {svg}
+    </span>
+  );
+}
+
+/** Chat icon with an unread indicator dot. */
+function ChatUnreadIcon(props: SvgIconProps): ReactElement {
+  const glyph = <ChatIcon color={props.color} size={props.size} />;
+  if (props.title === undefined) {
+    return (
+      <span className={styles.chatUnreadWrap} aria-hidden>
+        {glyph}
+        <span className={styles.chatUnreadDot} />
+      </span>
+    );
+  }
+
+  return (
+    <span className={styles.chatUnreadWrap} role="img" aria-label={props.title} title={props.title}>
+      {glyph}
+      <span className={styles.chatUnreadDot} />
+    </span>
+  );
+}
+
+/** Grid/board glyph for returning to the primary panel. */
+function BoardIcon({ color, title, size }: SvgIconProps): ReactElement {
+  const px = getSvgBoxPixels(size);
+  const style: CSSProperties | undefined = color ? { color } : undefined;
+  const svg = (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={styles.svgGlyph}
+      style={style}
+      aria-hidden={title === undefined ? true : undefined}
+    >
+      <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M4 10h16M4 14h16M10 4v16M14 4v16" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+
+  if (title === undefined) {
+    return svg;
+  }
+
+  return (
+    <span className={styles.svgGlyphWrap} role="img" aria-label={title} title={title}>
+      {svg}
+    </span>
+  );
+}
+
+/** Send / submit arrow for message composer. */
+function SendIcon({ color, title, size }: SvgIconProps): ReactElement {
+  const px = getSvgBoxPixels(size);
+  const style: CSSProperties | undefined = color ? { color } : undefined;
+  const svg = (
+    <svg
+      width={px}
+      height={px}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={styles.svgGlyph}
+      style={style}
+      aria-hidden={title === undefined ? true : undefined}
+    >
+      <path d="M5 12l14-7-4 7 4 7-14-7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+
+  if (title === undefined) {
+    return svg;
+  }
+
+  return (
+    <span className={styles.svgGlyphWrap} role="img" aria-label={title} title={title}>
+      {svg}
+    </span>
+  );
+}
+
 /** Three-line menu indicator built with CSS gradients (inherits `currentColor`). */
 function HamburgerIcon({ color, title, size }: SvgIconProps): ReactElement {
   const sizeClassName = getHamburgerSizeClassName(size);
@@ -353,6 +469,15 @@ export function Icon(props: IconProps): ReactElement {
   if (props.iconName === "ai") {
     return <AiIcon color={props.color} title={props.title} size={props.size} />;
   }
+  if (props.iconName === "board") {
+    return <BoardIcon color={props.color} title={props.title} size={props.size} />;
+  }
+  if (props.iconName === "chat") {
+    return <ChatIcon color={props.color} title={props.title} size={props.size} />;
+  }
+  if (props.iconName === "chatUnread") {
+    return <ChatUnreadIcon color={props.color} title={props.title} size={props.size} />;
+  }
   if (props.iconName === "close") {
     return <CloseIcon color={props.color} title={props.title} size={props.size} />;
   }
@@ -373,6 +498,9 @@ export function Icon(props: IconProps): ReactElement {
   }
   if (props.iconName === "plus") {
     return <PlusIcon color={props.color} title={props.title} size={props.size} />;
+  }
+  if (props.iconName === "send") {
+    return <SendIcon color={props.color} title={props.title} size={props.size} />;
   }
   if (props.iconName === "show") {
     return <ShowIcon color={props.color} title={props.title} size={props.size} />;

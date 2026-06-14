@@ -31,6 +31,9 @@ type RoomResyncOnResumeArgs = Readonly<{
 
 /** Applies a realtime room event to local state and the query cache. */
 function onRoomEvent(event: DotsRoomEvent, args: RoomEventHandlerArgs): void {
+  if (event.type === "CHAT_MESSAGE" || event.type === "CHAT_READ" || event.type === "CHAT_TYPING") {
+    return;
+  }
   const { room } = event;
   const { expectedRoomId, setRoom, setIsConnected, queryClient } = args;
   if (room.id !== expectedRoomId) {

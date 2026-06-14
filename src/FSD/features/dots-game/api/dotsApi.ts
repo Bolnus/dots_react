@@ -3,10 +3,12 @@ import type {
   CommitActionRequest,
   CommitActionResult,
   CreateRoomRequest,
+  DotsChatMessage,
   DotsRoomDetail,
   DotsRoomSummary,
   HeartbeatResult,
   JoinRoomRequest,
+  ListChatMessagesResult,
   PatchRoomRequest,
   RegisterSessionResult
 } from "./dotsOnlineApiTypes";
@@ -119,4 +121,36 @@ export async function applyCommittedAction(roomId: string, request: CommitAction
     expectedNextHash: request.expectedNextHash
   });
   return data;
+}
+
+type FetchChatMessagesArgs = Readonly<{
+  afterMs?: number;
+  beforeMs?: number;
+  limit?: number;
+}>;
+
+/** Returns paginated chat messages for a room. */
+export async function fetchChatMessages(
+  roomId: string,
+  args: FetchChatMessagesArgs = {}
+): Promise<ListChatMessagesResult> {
+  const { data } = await dotsHttp.get<ListChatMessagesResult>(`/rooms/${roomId}/chat/messages`, {
+    params: {
+      afterMs: args.afterMs,
+      beforeMs: args.beforeMs,
+      limit: args.limit
+    }
+  });
+  return data;
+}
+
+/** Posts a chat message to a room. */
+export async function postChatMessage(roomId: string, content: string): Promise<DotsChatMessage> {
+  const { data } = await dotsHttp.post<DotsChatMessage>(`/rooms/${roomId}/chat/messages`, { content });
+  return data;
+}
+
+/** Marks chat messages as read up to the given timestamp. */
+export async function postChatRead(roomId: string, lastReadAtMs: number): Promise<void> {
+  await dotsHttp.post(`/rooms/${roomId}/chat/read`, { lastReadAtMs });
 }

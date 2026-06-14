@@ -99,7 +99,22 @@
     "serverRejected": "Сервер отклонил ход",
     "youAreOwnerHint": "Вы — создатель комнаты",
     "youAreViewerHint": "Вы присоединились как зритель",
-    "leave": "Выйти"
+    "leave": "Выйти",
+    "chatToggleAria": "Открыть чат",
+    "gameToggleAria": "Вернуться к игре",
+    "chatPlaceholder": "Сообщение…",
+    "chatSendAria": "Отправить сообщение",
+    "chatHeaderViewers": "{count} смотрят",
+    "chatDelivered": "Доставлено",
+    "chatRead": "Прочитано",
+    "chatTypingOne": "{name} печатает…",
+    "chatTypingMany": "{names} печатают…",
+    "chatSenderAi": "ИИ",
+    "chatSenderViewer": "Зритель",
+    "chatSenderPlayer": "Игрок",
+    "chatMessagesAria": "Сообщения чата",
+    "chatLoading": "Загрузка чата…",
+    "chatLoadingOlder": "Загрузка старых сообщений…"
   },
   "games": {
     "dots": {

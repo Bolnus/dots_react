@@ -6,7 +6,8 @@ import type { DotsRoomDetail } from "./dotsOnlineApiTypes";
 export const DOTS_QUERY_KEYS = {
   roomsList: ["dots", "rooms"] as const,
   room: (roomId: string) => ["dots", "rooms", roomId] as const,
-  session: ["dots", "session"] as const
+  session: ["dots", "session"] as const,
+  chatMessages: (roomId: string) => ["dots", "rooms", roomId, "chat"] as const
 };
 
 /** Writes the fresh room into the per-room cache and invalidates the rooms list. */

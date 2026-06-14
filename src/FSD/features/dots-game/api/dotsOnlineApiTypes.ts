@@ -153,10 +153,38 @@ export type CommitActionResult =
   | Readonly<{ status: "rejected"; reason: CommitRejectReason; snapshot: DotsRoomDetail }>;
 
 /** Live channel events broadcast to room subscribers. */
+export type DotsChatSenderKind = "ai" | "player" | "viewer";
+
+export type DotsChatMessage = Readonly<{
+  id: string;
+  senderKind: DotsChatSenderKind;
+  senderUserId: string | null;
+  senderDisplayName: string | null;
+  content: string;
+  createdAtMs: number;
+}>;
+
+export type DotsChatReadState = Readonly<{
+  userId: string;
+  lastReadAtMs: number;
+}>;
+
+export type ListChatMessagesResult = Readonly<{
+  messages: readonly DotsChatMessage[];
+  hasMoreBefore: boolean;
+  hasMoreAfter: boolean;
+  readStates: readonly DotsChatReadState[];
+}>;
+
+export const MAX_CHAT_MESSAGE_LENGTH = 500;
+
 export type DotsRoomEvent =
   | Readonly<{ type: "ROOM_STATE"; room: DotsRoomDetail }>
   | Readonly<{ type: "STATE_DELTA"; room: DotsRoomDetail }>
-  | Readonly<{ type: "PRESENCE_DELTA"; room: DotsRoomDetail }>;
+  | Readonly<{ type: "PRESENCE_DELTA"; room: DotsRoomDetail }>
+  | Readonly<{ type: "CHAT_MESSAGE"; roomId: string; message: DotsChatMessage }>
+  | Readonly<{ type: "CHAT_READ"; roomId: string; userId: string; lastReadAtMs: number }>
+  | Readonly<{ type: "CHAT_TYPING"; roomId: string; userId: string; displayName: string }>;
 
 /** Payload on the global dots API error document event. */
 export type DotsApiErrorDetail = Readonly<{ message: string }>;

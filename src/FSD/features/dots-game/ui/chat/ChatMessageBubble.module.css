@@ -1,0 +1,55 @@
+.bubbleOwn,
+.bubbleOther {
+  max-width: 92%;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+
+.bubbleOwn {
+  margin-left: auto;
+  border-color: color-mix(in srgb, #3b82f6 45%, var(--border-subtle));
+}
+
+.bubbleOther {
+  margin-right: auto;
+  border-color: color-mix(in srgb, #ef4444 55%, var(--border-subtle));
+}
+
+.content {
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.time {
+  color: var(--text-muted);
+  font-size: var(--font-size-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.tickDelivered {
+  color: var(--text-muted);
+}
+
+.tickRead {
+  color: #ef4444;
+}

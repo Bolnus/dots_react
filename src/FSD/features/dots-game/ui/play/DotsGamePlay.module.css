@@ -68,9 +68,15 @@
 }
 
 .statusBarRight {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.statusBarRight__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .viewerBadge {

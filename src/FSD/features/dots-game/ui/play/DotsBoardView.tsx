@@ -269,7 +269,7 @@ function DotsBoardChrome({
           </div>
           {extraStatus ? (
             <div className={styles.statusBarRight}>
-              <span>{extraStatus.statusText}</span>
+              <span className={styles.statusBarRight__text}>{extraStatus.statusText}</span>
               {extraStatus.showViewerBadge ? (
                 <span
                   className={styles.viewerBadge}

@@ -165,7 +165,7 @@ export function useRoomChat(roomId: string | null, userId: string, isSecondaryVi
     return () => clearInterval(timer);
   }, [typingUsers.length]);
 
-  const { mutate: sendMessageMutate, isPending: isSending } = useMutation({
+  const { mutate: sendMessageMutate } = useMutation({
     mutationFn: (content: string) => postChatMessage(roomId!, content),
     onSuccess: (message) => setMessages((prev) => mergeMessages(prev, [message]))
   });
@@ -221,7 +221,6 @@ export function useRoomChat(roomId: string | null, userId: string, isSecondaryVi
     hasMoreBefore: hasNextPage ?? false,
     isLoading,
     isFetchingOlder: isFetchingNextPage,
-    isSending,
     hasUnread,
     typingUsers,
     loadOlderMessages,

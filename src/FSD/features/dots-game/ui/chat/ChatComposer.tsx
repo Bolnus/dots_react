@@ -12,7 +12,6 @@ import { TextInput } from "@/FSD/shared/ui/input/TextInput";
 
 type ChatComposerProps = Readonly<{
   disabled?: boolean;
-  isSending: boolean;
   onSend: (content: string) => void;
   onTyping: () => void;
 }>;
@@ -38,18 +37,18 @@ function handleComposerSend(
 }
 
 /** Chat message input with send button. */
-export function ChatComposer({ disabled = false, isSending, onSend, onTyping }: ChatComposerProps): ReactElement {
+export function ChatComposer({ disabled = false, onSend, onTyping }: ChatComposerProps): ReactElement {
   const t = useTranslations("DotsGame");
   const [draft, setDraft] = useState("");
   const trimmed = draft.trim();
-  const canSend = !disabled && !isSending && trimmed.length > 0;
+  const canSend = !disabled && trimmed.length > 0;
 
   return (
     <div className={styles.composer}>
       <TextInput
         className={styles.input}
         value={draft}
-        disabled={disabled || isSending}
+        disabled={disabled}
         placeholder={t("chatPlaceholder")}
         onChange={(value) => handleComposerChange(value, setDraft, onTyping)}
         onEnterKeyUp={() => handleComposerSend(canSend, trimmed, onSend, setDraft)}
@@ -60,7 +59,6 @@ export function ChatComposer({ disabled = false, isSending, onSend, onTyping }: 
         background="solid"
         title={t("chatSendAria")}
         disabled={!canSend}
-        isFetching={isSending}
         onClick={() => handleComposerSend(canSend, trimmed, onSend, setDraft)}
       />
     </div>

@@ -6,7 +6,6 @@ export type UseRoomChatResult = Readonly<{
   hasMoreBefore: boolean;
   isLoading: boolean;
   isFetchingOlder: boolean;
-  isSending: boolean;
   hasUnread: boolean;
   typingUsers: readonly Readonly<{ userId: string; displayName: string; expiresAt: number }>[];
   loadOlderMessages: () => void;

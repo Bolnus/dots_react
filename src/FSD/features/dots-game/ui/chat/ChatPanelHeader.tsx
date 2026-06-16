@@ -59,6 +59,7 @@ export function ChatPanelHeader({
           background="ghost"
           title={t("gameToggleAria")}
           onClick={onBoardView}
+          iconSize="lg"
         />
         <div className={styles.headerSlot}>{headerContent}</div>
       </div>

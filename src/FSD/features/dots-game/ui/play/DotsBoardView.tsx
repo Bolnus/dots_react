@@ -291,6 +291,7 @@ function DotsBoardChrome({
               background="ghost"
               title={t("chatToggleAria")}
               onClick={onChatView}
+              iconSize="lg"
             />
           </div>
         ) : null}

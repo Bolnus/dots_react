@@ -112,12 +112,7 @@ export function RoomChatPanel({ userId, opponentUserId, readOnly = false, chat }
         ))}
       </div>
       <ChatTypingIndicator names={typingNames} />
-      <ChatComposer
-        disabled={readOnly}
-        isSending={chat.isSending}
-        onSend={chat.sendMessage}
-        onTyping={chat.notifyTyping}
-      />
+      <ChatComposer disabled={readOnly} onSend={chat.sendMessage} onTyping={chat.notifyTyping} />
     </div>
   );
 }

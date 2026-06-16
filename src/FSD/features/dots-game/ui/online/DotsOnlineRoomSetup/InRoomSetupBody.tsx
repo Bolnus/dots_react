@@ -23,6 +23,8 @@ type InRoomSetupBodyProps = Readonly<{
   userId: string;
   defaults: DotsGameConfig;
   isLeaving?: boolean;
+  isStarting?: boolean;
+  isPatching?: boolean;
   onBack: () => void;
   onStart: () => void;
   onPatch: (
@@ -31,7 +33,6 @@ type InRoomSetupBodyProps = Readonly<{
   onKick: (kickUserId: string) => void;
   onAddAi: () => void;
   isAddingAi?: boolean;
-  startError: string | null;
 }>;
 
 /** In-room mode renderer: live-updates from `useRoomLive`; owner-only fields propagate to the server. */
@@ -40,13 +41,14 @@ export function InRoomSetupBody({
   userId,
   defaults,
   isLeaving = false,
+  isStarting = false,
+  isPatching = false,
   onBack,
   onStart,
   onPatch,
   onKick,
   onAddAi,
-  isAddingAi = false,
-  startError
+  isAddingAi = false
 }: InRoomSetupBodyProps): ReactElement {
   const t = useTranslations("DotsGame");
   const isOwner = room.ownerUserId === userId;
@@ -56,6 +58,7 @@ export function InRoomSetupBody({
   );
   const playerLabels = useMemo(() => buildPlayerLabels(room, t), [room, t]);
   const canStart = isOwner && room.players.length === PLAYER_SLOTS;
+  const fieldsDisabled = !isOwner || isPatching;
 
   return (
     <div className={styles.setup}>
@@ -70,7 +73,7 @@ export function InRoomSetupBody({
       <GridSizeFields
         rows={room.config.rows}
         cols={room.config.cols}
-        disabled={!isOwner}
+        disabled={fieldsDisabled}
         onRowsChange={(value) =>
           onPatch({
             config: { ...room.config, rows: isValidGridDimension(value) ? value : room.config.rows }
@@ -100,11 +103,10 @@ export function InRoomSetupBody({
           onKick={onKick}
         />
       </RostersGrid>
-      {startError ? <p className={styles.error}>{startError}</p> : null}
       {isOwner && !canStart ? <p className={styles.ownerHint}>{t("notEnoughPlayers")}</p> : null}
       <div className={styles.actions}>
         {isOwner ? (
-          <DotsGameStartButton onClick={onStart} disabled={!canStart}>
+          <DotsGameStartButton onClick={onStart} disabled={!canStart} isLoading={isStarting}>
             {t("startGame")}
           </DotsGameStartButton>
         ) : null}

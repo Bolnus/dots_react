@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { DOTS_API_ERROR_EVENT } from "./dotsApiConsts";
-import { extractDotsErrorMessage } from "./dotsHttpClient";
+import { resolveDotsErrorMessage } from "./dotsHttpClient";
 import type { DotsApiErrorDetail } from "./dotsOnlineApiTypes";
 
 /** Updates error state from a global dots API error document event. */
@@ -31,7 +31,7 @@ export function useDotsApiErrors(): Readonly<{
   }, []);
 
   const reportError = useCallback((error: unknown): void => {
-    const message = extractDotsErrorMessage(error);
+    const message = resolveDotsErrorMessage(error);
     if (message) {
       setErrorMessage(message);
     }

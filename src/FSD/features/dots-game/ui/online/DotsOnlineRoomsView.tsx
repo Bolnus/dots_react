@@ -5,6 +5,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
 import type { DotsSessionActiveRoom, JoinRoomRequest } from "../../api/dotsOnlineApiTypes";
+import { resolveDotsErrorMessage } from "../../api/dotsHttpClient";
 import type { DotsOnlineIdentity, IdentityPhase } from "../../model/onlineIdentityTypes";
 import {
   closeJoinModal,
@@ -116,7 +117,10 @@ export function DotsOnlineRoomsView({
 
   useEffect(() => {
     if (joinMutationError) {
-      setJoinError(joinMutationError.message);
+      const message = resolveDotsErrorMessage(joinMutationError);
+      if (message) {
+        setJoinError(message);
+      }
       onJoinErrorHandled();
     }
   }, [joinMutationError, onJoinErrorHandled]);

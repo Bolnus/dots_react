@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useTranslations } from "next-intl";
 
 import type { LeaveRoomRequest } from "../../../api/dotsOnlineApiTypes";
 import { useAddAiMutation } from "../../../api/useAddAiMutation";
-import { useDotsApiErrors } from "../../../api/useDotsApiErrors";
 import { useLeaveRoomMutation } from "../../../api/useLeaveRoomMutation";
 import { useRoomLive } from "../../../api/useRoomLive";
 import { useStartGameMutation } from "../../../api/useStartGameMutation";
@@ -12,12 +12,10 @@ import { useUpdateRoomMutation } from "../../../api/useUpdateRoomMutation";
 import { defaultDotsConfig } from "../../../model/logic";
 
 import { DraftRoomSetupBody } from "./DraftRoomSetupBody";
-import styles from "./DotsOnlineRoomSetup.module.css";
 import { InRoomSetupBody } from "./InRoomSetupBody";
-import { requestStartGame, submitDraft } from "./roomSetupUtils";
+import { submitDraft } from "./roomSetupUtils";
 import type { DotsOnlineRoomSetupProps, DraftFormState } from "./types";
-import { InfoModal } from "@/FSD/shared/ui/info-modal/InfoModal";
-import { useTranslations } from "next-intl";
+import { SectionFetching } from "@/FSD/shared/ui/section-fetching/SectionFetching";
 
 /** Leaves the waiting room or navigates back when still in draft mode. */
 function requestLeave({
@@ -53,20 +51,24 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
     cols: defaults.cols,
     password: ""
   }));
-  const [startError, setStartError] = useState<string | null>(null);
 
   const { roomId, userId, isCreating = false, onBack, onGameStarted, onLeftRoom, onCreateRoom } = props;
   const live = useRoomLive(roomId);
   const { room } = live;
 
-  const { mutate: updateRoom } = useUpdateRoomMutation();
-  const { mutate: addAi, error: addAiError, reset: resetAddAi, isPending: isAddingAi } = useAddAiMutation();
-  const { errorMessage, clearError, reportError } = useDotsApiErrors();
-  const { mutate: startGame, error: startMutationError, reset: resetStart } = useStartGameMutation();
+  const { mutate: updateRoom, isPending: isPatching } = useUpdateRoomMutation();
+  const { mutate: addAi, isPending: isAddingAi } = useAddAiMutation();
+  const {
+    mutate: startGame,
+    error: startMutationError,
+    reset: resetStart,
+    isPending: isStarting
+  } = useStartGameMutation();
   const {
     mutate: leaveRoom,
     isPending: isLeaving,
     isSuccess: didLeaveSucceed,
+    isError: didLeaveFail,
     reset: resetLeave
   } = useLeaveRoomMutation();
 
@@ -78,17 +80,9 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
 
   useEffect(() => {
     if (startMutationError) {
-      setStartError(startMutationError.message);
       resetStart();
     }
   }, [startMutationError, resetStart]);
-
-  useEffect(() => {
-    if (addAiError) {
-      reportError(addAiError);
-      resetAddAi();
-    }
-  }, [addAiError, reportError, resetAddAi]);
 
   useEffect(() => {
     if (didLeaveSucceed) {
@@ -96,6 +90,12 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
       resetLeave();
     }
   }, [didLeaveSucceed, onLeftRoom, resetLeave]);
+
+  useEffect(() => {
+    if (didLeaveFail) {
+      resetLeave();
+    }
+  }, [didLeaveFail, resetLeave]);
 
   if (!roomId) {
     return (
@@ -111,31 +111,23 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
   }
 
   if (!room) {
-    return <div className={styles.setup}>...</div>;
+    return <SectionFetching label={t("connectingToRoom")} />;
   }
 
   return (
-    <>
-      <InfoModal
-        isOpen={errorMessage !== null}
-        title={t("errorTitle")}
-        message={errorMessage ?? ""}
-        buttonLabel={t("errorOk")}
-        onClose={clearError}
-      />
-      <InRoomSetupBody
-        room={room}
-        userId={userId}
-        defaults={defaults}
-        isLeaving={isLeaving}
-        isAddingAi={isAddingAi}
-        onBack={() => requestLeave({ isLeaving, roomId, userId, onBack, leaveRoom })}
-        onStart={() => requestStartGame({ roomId: room.id, userId, setStartError, startGame })}
-        onPatch={(patch) => updateRoom({ roomId: room.id, request: { byUserId: userId, ...patch } })}
-        onKick={(kickUserId) => updateRoom({ roomId: room.id, request: { byUserId: userId, kickUserId } })}
-        onAddAi={() => addAi(room.id)}
-        startError={startError}
-      />
-    </>
+    <InRoomSetupBody
+      room={room}
+      userId={userId}
+      defaults={defaults}
+      isLeaving={isLeaving}
+      isStarting={isStarting}
+      isPatching={isPatching}
+      isAddingAi={isAddingAi}
+      onBack={() => requestLeave({ isLeaving, roomId, userId, onBack, leaveRoom })}
+      onStart={() => startGame({ roomId: room.id, request: { byUserId: userId } })}
+      onPatch={(patch) => updateRoom({ roomId: room.id, request: { byUserId: userId, ...patch } })}
+      onKick={(kickUserId) => updateRoom({ roomId: room.id, request: { byUserId: userId, kickUserId } })}
+      onAddAi={() => addAi(room.id)}
+    />
   );
 }

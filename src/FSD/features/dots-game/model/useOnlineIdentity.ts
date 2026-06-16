@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { registerSession, validateSession } from "../api/dotsApi";
-import { extractDotsErrorCode, extractDotsErrorMessage } from "../api/dotsHttpClient";
+import { extractDotsErrorCode, resolveDotsErrorMessage } from "../api/dotsHttpClient";
 import type { DotsOnlineIdentity, IdentityPhase, UseOnlineIdentityResult } from "./onlineIdentityTypes";
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 import { readStoredString, removeStoredString, writeStoredString } from "@/FSD/shared/lib/local-storage/localStorage";
@@ -102,11 +102,11 @@ export function useOnlineIdentity(): UseOnlineIdentityResult {
     }
     setIsRegistering(true);
     try {
-      const result = await registerSession(trimmed);
+      const result = await registerSession(trimmed, { silentError: true });
       applyRegistrationResult(result, setIdentity, setPhase);
       setStoredDisplayName(result.displayName);
     } catch (error: unknown) {
-      const message = extractDotsErrorMessage(error);
+      const message = resolveDotsErrorMessage(error);
       if (message) {
         throw new Error(message);
       }

@@ -106,14 +106,16 @@ export function performJoin({
   userId,
   displayName,
   joinRoom,
-  setJoinError
+  setJoinError,
+  silentError = true
 }: Readonly<{
   pending: PendingJoin;
   password: string | undefined;
   userId: string;
   displayName: string;
-  joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest }>) => void;
+  joinRoom: (args: Readonly<{ roomId: string; request: JoinRoomRequest; silentError?: boolean }>) => void;
   setJoinError: (value: string | null) => void;
+  silentError?: boolean;
 }>): void {
   setJoinError(null);
   joinRoom({
@@ -123,7 +125,8 @@ export function performJoin({
       displayName,
       asViewer: pending.asViewer,
       password
-    }
+    },
+    silentError
   });
 }
 
@@ -203,7 +206,8 @@ export function tryAutoReconnectActiveGame({
     userId: identity.userId,
     displayName: identity.displayName,
     joinRoom,
-    setJoinError: () => undefined
+    setJoinError: () => undefined,
+    silentError: false
   });
 }
 

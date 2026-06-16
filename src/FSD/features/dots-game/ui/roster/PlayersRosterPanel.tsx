@@ -10,6 +10,7 @@ import { PLAYER_SLOTS } from "../online/DotsOnlineRoomSetup/roomSetupUtils";
 import panelStyles from "./RosterPanel.module.css";
 import { RosterRow, type RosterUser } from "./RosterRow";
 import styles from "./PlayersRosterPanel.module.css";
+import { Icon } from "@/FSD/shared/ui/icon/Icon";
 
 type PlayersRosterPanelProps = Readonly<{
   room: DotsRoomDetail;
@@ -66,7 +67,14 @@ export function PlayersRosterPanel({
         ) : null}
         {showAddAi ? (
           <li className={styles.addAiRow}>
-            <button type="button" className={styles.addAiButton} onClick={onAddAi} disabled={isAddingAi}>
+            <button
+              type="button"
+              className={styles.addAiButton}
+              onClick={onAddAi}
+              disabled={isAddingAi}
+              aria-busy={isAddingAi}
+            >
+              {isAddingAi ? <Icon iconName="fetching" size="sm" title={t("addingAi")} /> : null}
               {isAddingAi ? t("addingAi") : t("addAi")}
             </button>
           </li>

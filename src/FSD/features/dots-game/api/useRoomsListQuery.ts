@@ -10,14 +10,17 @@ type UseRoomsListQueryResult = Readonly<{
   data: DotsRoomSummary[] | undefined;
   error: Error | null;
   isLoading: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  refetch: () => Promise<unknown>;
 }>;
 
 /** Returns the live rooms list query (auto-refreshes via mutation invalidation). */
 export function useRoomsListQuery(): UseRoomsListQueryResult {
-  const { data, error, isLoading } = useQuery<DotsRoomSummary[], Error>({
+  const { data, error, isLoading, isFetching, isError, refetch } = useQuery<DotsRoomSummary[], Error>({
     queryKey: DOTS_QUERY_KEYS.roomsList,
     queryFn: fetchRooms,
     refetchInterval: 10_000
   });
-  return { data, error, isLoading };
+  return { data, error, isLoading, isFetching, isError, refetch };
 }

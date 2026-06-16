@@ -12,6 +12,7 @@ import { ChatMessageGroup } from "./ChatMessageGroup";
 import { groupMessagesBySender } from "./chatMessageGroups";
 import { ChatTypingIndicator } from "./ChatTypingIndicator";
 import styles from "./RoomChatPanel.module.css";
+import { SectionFetching } from "@/FSD/shared/ui/section-fetching/SectionFetching";
 
 type RoomChatPanelProps = Readonly<{
   userId: string;
@@ -35,11 +36,7 @@ function scrollMessageListOnBecomeVisible(
 }
 
 /** Scrolls the message list to the bottom when messages load or grow. */
-function useScrollToBottom(
-  listRef: RefObject<HTMLDivElement | null>,
-  messageCount: number,
-  isReady: boolean
-): boolean {
+function useScrollToBottom(listRef: RefObject<HTMLDivElement | null>, messageCount: number, isReady: boolean): boolean {
   const [canLoadOlder, setCanLoadOlder] = useState(false);
 
   useLayoutEffect(() => {
@@ -102,8 +99,8 @@ export function RoomChatPanel({ userId, opponentUserId, readOnly = false, chat }
     <div className={styles.panel}>
       <div ref={listRef} className={styles.messageList} aria-label={t("chatMessagesAria")}>
         <div ref={topSentinelRef} className={styles.topSentinel} />
-        {chat.isFetchingOlder ? <div className={styles.loadingOlder}>{t("chatLoadingOlder")}</div> : null}
-        {chat.isLoading ? <div className={styles.loading}>{t("chatLoading")}</div> : null}
+        {chat.isFetchingOlder ? <SectionFetching label={t("chatLoadingOlder")} compact /> : null}
+        {chat.isLoading ? <SectionFetching label={t("chatLoading")} compact /> : null}
         {groups.map((group) => (
           <ChatMessageGroup
             key={`${group.senderKey}-${group.messages[0]?.id ?? "empty"}`}

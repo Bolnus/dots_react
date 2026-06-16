@@ -1,10 +1,18 @@
 import axios, { type AxiosError, type AxiosInstance } from "axios";
 
+import en from "@/messages/en.json";
+import ru from "@/messages/ru.json";
+
 import { DOTS_API_ERROR_EVENT } from "./dotsApiConsts";
 import type { DotsApiErrorBody, DotsHttpRequestConfig } from "./dotsHttpClientTypes";
 import type { DotsApiErrorDetail } from "./dotsOnlineApiTypes";
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 import { readStoredString } from "@/FSD/shared/lib/local-storage/localStorage";
+
+const GENERIC_API_ERROR_BY_LOCALE: Readonly<Record<string, string>> = {
+  en: en.DotsGame.genericApiError,
+  ru: ru.DotsGame.genericApiError
+};
 
 let localeProvider: (() => string) | null = null;
 
@@ -20,6 +28,19 @@ export function extractDotsErrorMessage(error: unknown): string | null {
   }
   const axiosError = error as AxiosError<DotsApiErrorBody>;
   return axiosError.response?.data?.messageLocal ?? null;
+}
+
+/** Returns `messageLocal` or a localized generic fallback for HTTP failures. */
+export function resolveDotsErrorMessage(error: unknown): string | null {
+  const messageLocal = extractDotsErrorMessage(error);
+  if (messageLocal) {
+    return messageLocal;
+  }
+  if (!axios.isAxiosError(error) || !error.response) {
+    return null;
+  }
+  const locale = localeProvider?.() ?? "en";
+  return GENERIC_API_ERROR_BY_LOCALE[locale] ?? GENERIC_API_ERROR_BY_LOCALE.en ?? null;
 }
 
 /** Extracts a dots API error code from an axios failure. */
@@ -63,7 +84,7 @@ export function createDotsHttpClient(): AxiosInstance {
     (response) => response,
     (error) => {
       const axiosError = axios.isAxiosError(error) ? error : null;
-      const message = extractDotsErrorMessage(error);
+      const message = resolveDotsErrorMessage(error);
       const silent = isSilentDotsRequest(axiosError?.config as DotsHttpRequestConfig | undefined);
       if (message && !silent && typeof document !== "undefined") {
         document.dispatchEvent(new CustomEvent<DotsApiErrorDetail>(DOTS_API_ERROR_EVENT, { detail: { message } }));

@@ -6,7 +6,7 @@ import type { DotsRoomDetail, JoinRoomRequest } from "./dotsOnlineApiTypes";
 import { joinRoom } from "./dotsApi";
 import { DOTS_QUERY_KEYS, syncRoomToCache } from "./queryKeys";
 
-type JoinRoomArgs = Readonly<{ roomId: string; request: JoinRoomRequest }>;
+type JoinRoomArgs = Readonly<{ roomId: string; request: JoinRoomRequest; silentError?: boolean }>;
 
 type UseJoinRoomMutationResult = Readonly<{
   mutate: (args: JoinRoomArgs) => void;
@@ -21,7 +21,7 @@ type UseJoinRoomMutationResult = Readonly<{
 export function useJoinRoomMutation(): UseJoinRoomMutationResult {
   const queryClient = useQueryClient();
   const { mutate, data, error, reset, isPending, variables } = useMutation<DotsRoomDetail, Error, JoinRoomArgs>({
-    mutationFn: ({ roomId, request }) => joinRoom(roomId, request),
+    mutationFn: ({ roomId, request, silentError }) => joinRoom(roomId, request, { silentError }),
     onSuccess: (room) => {
       syncRoomToCache(queryClient, room);
       void queryClient.invalidateQueries({ queryKey: DOTS_QUERY_KEYS.session });

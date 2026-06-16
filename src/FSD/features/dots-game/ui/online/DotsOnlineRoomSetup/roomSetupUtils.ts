@@ -49,22 +49,6 @@ export function sortedPlayerUsers(room: DotsRoomDetail): RosterUser[] {
   return sorted.map((player) => player.user);
 }
 
-/** Clears any prior start error and fires the start-game mutation for the room owner. */
-export function requestStartGame({
-  roomId,
-  userId,
-  setStartError,
-  startGame
-}: Readonly<{
-  roomId: string;
-  userId: string;
-  setStartError: (value: string | null) => void;
-  startGame: (args: Readonly<{ roomId: string; request: Readonly<{ byUserId: string }> }>) => void;
-}>): void {
-  setStartError(null);
-  startGame({ roomId, request: { byUserId: userId } });
-}
-
 type SubmitDraftArgs = Readonly<{
   draft: DraftFormState;
   defaults: DotsGameConfig;

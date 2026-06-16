@@ -88,11 +88,19 @@ export async function patchRoom(roomId: string, request: PatchRoomRequest): Prom
 }
 
 /** Joins a room as player or viewer. */
-export async function joinRoom(roomId: string, request: JoinRoomRequest): Promise<DotsRoomDetail> {
-  const { data } = await dotsHttp.post<DotsRoomDetail>(`/rooms/${roomId}/join`, {
-    password: request.password,
-    asViewer: request.asViewer
-  });
+export async function joinRoom(
+  roomId: string,
+  request: JoinRoomRequest,
+  options: Readonly<{ silentError?: boolean }> = {}
+): Promise<DotsRoomDetail> {
+  const { data } = await dotsHttp.post<DotsRoomDetail>(
+    `/rooms/${roomId}/join`,
+    {
+      password: request.password,
+      asViewer: request.asViewer
+    },
+    withSilentDotsError(options.silentError === true)
+  );
   return data;
 }
 

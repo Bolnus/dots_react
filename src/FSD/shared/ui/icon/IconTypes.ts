@@ -3,6 +3,7 @@ import type { UiSize } from "../../lib/common/types";
 export type IconName =
   | "ai"
   | "board"
+  | "boardActive"
   | "chat"
   | "chatUnread"
   | "close"

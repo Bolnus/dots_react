@@ -13,6 +13,8 @@ type ChatPanelHeaderProps = Readonly<{
   viewerCount: number;
   /** When set, a back-to-board button is shown before the header content. */
   onBoardView?: () => void;
+  /** Highlights the board toggle when it is this player's turn (narrow layout). */
+  isMyTurn?: boolean;
 }>;
 
 /** Renders the opponent name and viewer count row for the chat panel. */
@@ -37,7 +39,12 @@ function ChatHeaderContent({
 }
 
 /** Chat panel title row: opponent name and viewer count. */
-export function ChatPanelHeader({ opponentName, viewerCount, onBoardView }: ChatPanelHeaderProps): ReactElement {
+export function ChatPanelHeader({
+  opponentName,
+  viewerCount,
+  onBoardView,
+  isMyTurn = false
+}: ChatPanelHeaderProps): ReactElement {
   const t = useTranslations("DotsGame");
   const viewersAriaLabel = t("chatHeaderViewers", { count: viewerCount });
   const headerContent = (
@@ -47,7 +54,12 @@ export function ChatPanelHeader({ opponentName, viewerCount, onBoardView }: Chat
   if (onBoardView) {
     return (
       <div className={styles.mobileNav}>
-        <ButtonIcon iconName="board" background="ghost" title={t("gameToggleAria")} onClick={onBoardView} />
+        <ButtonIcon
+          iconName={isMyTurn ? "boardActive" : "board"}
+          background="ghost"
+          title={t("gameToggleAria")}
+          onClick={onBoardView}
+        />
         <div className={styles.headerSlot}>{headerContent}</div>
       </div>
     );

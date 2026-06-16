@@ -339,6 +339,7 @@ function ChatIcon({ color, title, size }: SvgIconProps): ReactElement {
     >
       <path
         d="M7 18.5V20l2.2-1.5H17a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7.5a3 3 0 0 0 3 3Z"
+        fill="#ffffff"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinejoin="round"
@@ -360,6 +361,26 @@ function ChatIcon({ color, title, size }: SvgIconProps): ReactElement {
 /** Chat icon with an unread indicator dot. */
 function ChatUnreadIcon(props: SvgIconProps): ReactElement {
   const glyph = <ChatIcon color={props.color} size={props.size} />;
+  if (props.title === undefined) {
+    return (
+      <span className={styles.chatUnreadWrap} aria-hidden>
+        {glyph}
+        <span className={styles.chatUnreadDot} />
+      </span>
+    );
+  }
+
+  return (
+    <span className={styles.chatUnreadWrap} role="img" aria-label={props.title} title={props.title}>
+      {glyph}
+      <span className={styles.chatUnreadDot} />
+    </span>
+  );
+}
+
+/** Board icon with a turn indicator dot (mirrors chat unread styling). */
+function BoardActiveIcon(props: SvgIconProps): ReactElement {
+  const glyph = <BoardIcon color={props.color} size={props.size} />;
   if (props.title === undefined) {
     return (
       <span className={styles.chatUnreadWrap} aria-hidden>
@@ -471,6 +492,9 @@ export function Icon(props: IconProps): ReactElement {
   }
   if (props.iconName === "board") {
     return <BoardIcon color={props.color} title={props.title} size={props.size} />;
+  }
+  if (props.iconName === "boardActive") {
+    return <BoardActiveIcon color={props.color} title={props.title} size={props.size} />;
   }
   if (props.iconName === "chat") {
     return <ChatIcon color={props.color} title={props.title} size={props.size} />;

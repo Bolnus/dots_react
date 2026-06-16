@@ -168,8 +168,18 @@ export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnline
       </div>
       <div className={showSecondary ? styles.secondarySlot : styles.hiddenSlot}>
         <div className={styles.secondaryPanel}>
-          <ChatPanelHeader opponentName={opponentName} viewerCount={online.viewerCount} onBoardView={onBoardView} />
-          <RoomChatPanel userId={userId} opponentUserId={opponentUserId} readOnly={isViewer} chat={chat} />
+          <ChatPanelHeader
+            opponentName={opponentName}
+            viewerCount={online.viewerCount}
+            onBoardView={onBoardView}
+            isMyTurn={online.isMyTurn}
+          />
+          <RoomChatPanel
+            userId={userId}
+            opponentUserId={opponentUserId}
+            readOnly={isViewer || room.status === "finished"}
+            chat={chat}
+          />
         </div>
       </div>
     </div>

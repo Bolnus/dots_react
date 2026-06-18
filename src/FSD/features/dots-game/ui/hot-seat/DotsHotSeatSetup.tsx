@@ -5,14 +5,13 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 
 import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "../../model/consts";
-import { defaultDotsConfig, isValidGridDimension } from "../../model/logic";
+import { defaultDotsConfig, isValidGridDimension, persistDefaultGridDimensions } from "../../model/logic";
 import type { DotsGameConfig, PlayerId } from "../../model/types";
 
 import { DotsGamePlay } from "../play/DotsGamePlay";
 import { DotsGameStartButton } from "../play/DotsGameStartButton";
 import styles from "./DotsHotSeatSetup.module.css";
 import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";
-import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 import { NumberInput } from "@/FSD/shared/ui/input/NumberInput";
 import { TextInput } from "@/FSD/shared/ui/input/TextInput";
 import { NumberInputType } from "@/FSD/shared/ui/input/types";
@@ -52,12 +51,7 @@ function startDotsHotSeatSession(args: StartDotsHotSeatSessionArgs): void {
     player1: name1.trim() || t("player1")
   };
   setSession({ key: Date.now(), config, labels });
-  try {
-    localStorage.setItem(LocalStorageKey.DotsGameDefaultRows, String(rows));
-    localStorage.setItem(LocalStorageKey.DotsGameDefaultCols, String(cols));
-  } catch {
-    /* Quota / private mode: ignore */
-  }
+  persistDefaultGridDimensions(rows, cols);
 }
 
 /** Hot-seat dots setup view: grid + player names + Start; back returns to the lobby. */

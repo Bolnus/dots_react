@@ -4,6 +4,8 @@ import type { ReactElement } from "react";
 import { useLayoutEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { writeStoredString } from "@/FSD/shared/lib/local-storage/localStorage";
+import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 import { THEME_DARK, THEME_LIGHT, THEME_STORAGE_KEY } from "@/FSD/shared/lib/theme/constants";
 import { SegmentedControl } from "@/FSD/shared/ui/segmented-control/SegmentedControl";
 import { SegmentedButton } from "@/FSD/shared/ui/segmented-control/SegmentedButton";
@@ -48,11 +50,7 @@ function subscribe(onChange: () => void): () => void {
 /** Persists theme choice and notifies subscribers in this tab. */
 function applyTheme(theme: ThemeName): void {
   document.documentElement.setAttribute(DATA_THEME_ATTR, theme);
-  try {
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {
-    // ignore quota / private mode
-  }
+  writeStoredString(LocalStorageKey.DotsTheme, theme);
   window.dispatchEvent(new Event(THEME_EVENT));
 }
 

@@ -1,5 +1,6 @@
 import type { CellState, DotsGameConfig, FilledPolygon, GridPoint, PlayerId } from "./types";
 import { DOTS_GRID_MAX, DOTS_GRID_MIN } from "./consts";
+import { readStoredString, writeStoredString } from "@/FSD/shared/lib/local-storage/localStorage";
 import { LocalStorageKey } from "@/FSD/shared/lib/local-storage/localStorageKey";
 
 const DEFAULT_DOTS_ROWS = 28;
@@ -19,19 +20,18 @@ export function isValidGridDimension(value: number | undefined): value is number
 
 /** Parses a stored integer for `key`, or `undefined` if missing / invalid / unavailable. */
 function readStoredInt(key: LocalStorageKey): number | undefined {
-  if (typeof window === "undefined") {
+  const raw = readStoredString(key);
+  if (raw === null || raw === "") {
     return undefined;
   }
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw === null || raw === "") {
-      return undefined;
-    }
-    const n = Number.parseInt(raw, 10);
-    return Number.isNaN(n) ? undefined : n;
-  } catch {
-    return undefined;
-  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+/** Persists grid dimensions for future hot-seat and online setup defaults. */
+export function persistDefaultGridDimensions(rows: number, cols: number): void {
+  writeStoredString(LocalStorageKey.DotsGameDefaultRows, String(rows));
+  writeStoredString(LocalStorageKey.DotsGameDefaultCols, String(cols));
 }
 
 /** King-neighbour (8-connected), matching Qt distance < sqrt(2)*scale + 1 on a square grid. */

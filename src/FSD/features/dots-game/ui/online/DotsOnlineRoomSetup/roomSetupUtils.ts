@@ -1,7 +1,7 @@
 import type { useTranslations } from "next-intl";
 
 import type { DotsRoomDetail } from "../../../api/dotsOnlineApiTypes";
-import { isValidGridDimension } from "../../../model/logic";
+import { isValidGridDimension, persistDefaultGridDimensions } from "../../../model/logic";
 import type { DotsGameConfig, PlayerId } from "../../../model/types";
 import type { RosterUser } from "../../roster/RosterPanel";
 
@@ -62,6 +62,7 @@ export function submitDraft(args: SubmitDraftArgs): void {
     cols: args.draft.cols,
     defaults: args.defaults
   });
+  persistDefaultGridDimensions(effectiveConfig.rows, effectiveConfig.cols);
   args.onCreateRoom({
     name: args.draft.name,
     config: effectiveConfig,

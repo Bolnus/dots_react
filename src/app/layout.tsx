@@ -21,6 +21,8 @@ export default async function RootLayout({ children }: RootLayoutProps): Promise
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
+        <meta name="yandex-verification" content="5eb3f89f1f47f98d" />
+        <meta name="google-site-verification" content="4NwmTDdTYLuwiPV81bYu44vFv6GjMzgT3ASLwyQ7Sf4" />
         <Script id="theme-init" src="/theme-init.js" strategy="beforeInteractive" />
       </head>
       <body>{children}</body>

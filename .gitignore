@@ -19,6 +19,7 @@
 # production
 /build
 public/*.xml
+public/robots.txt
 
 # misc
 .DS_Store

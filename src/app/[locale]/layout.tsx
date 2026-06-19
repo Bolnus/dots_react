@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 
 import { QueryProvider } from "@/FSD/shared/api/query/QueryProvider.client";
 import { routing } from "@/FSD/shared/lib/i18n/routing";
+import { buildSiteMetadata } from "@/FSD/shared/lib/seo";
 import { AppHeader } from "@/FSD/widgets/app-header/ui/AppHeader";
 
 type LocaleLayoutProps = Readonly<{
@@ -23,13 +24,14 @@ export async function generateMetadata({ params }: Pick<LocaleLayoutProps, "para
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Metadata" });
 
-  return {
-    title: {
-      default: t("title"),
-      template: `%s · ${t("title")}`
-    },
-    description: t("description")
-  };
+  return buildSiteMetadata({
+    locale,
+    title: t("title"),
+    description: t("description"),
+    keywords: t("keywords"),
+    siteName: t("title"),
+    ogImageAlt: t("ogImageAlt")
+  });
 }
 
 /** Locale shell: messages provider, global styles, shared header. */

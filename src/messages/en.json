@@ -1,7 +1,9 @@
 {
   "Metadata": {
     "title": "Dots Arcade",
-    "description": "A small collection of browser mini-games"
+    "description": "A small collection of browser mini-games",
+    "keywords": "browser games, mini games, arcade, dots, online games, free games",
+    "ogImageAlt": "Dots Arcade — browser mini-games"
   },
   "HomePage": {
     "title": "Mini games",

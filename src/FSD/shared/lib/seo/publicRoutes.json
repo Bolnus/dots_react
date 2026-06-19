@@ -1,0 +1,6 @@
+{
+  "locales": ["en", "ru"],
+  "defaultLocale": "en",
+  "sitemapPaths": ["/", "/games/dots"],
+  "noIndexGameSlugs": ["memory", "snake", "tic-tac-toe"]
+}

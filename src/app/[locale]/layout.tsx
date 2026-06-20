@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 
 import { QueryProvider } from "@/FSD/shared/api/query/QueryProvider.client";
 import { routing } from "@/FSD/shared/lib/i18n/routing";
-import { buildSiteMetadata } from "@/FSD/shared/lib/seo";
+import { buildSiteMetadata } from "@/FSD/shared/lib/seo/buildMetadata";
 import { AppHeader } from "@/FSD/widgets/app-header/ui/AppHeader";
 
 type LocaleLayoutProps = Readonly<{

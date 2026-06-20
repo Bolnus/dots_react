@@ -7,7 +7,7 @@ import { GAMES, isGameId } from "@/FSD/entities/game/model/games";
 import { DotsGame } from "@/FSD/widgets/dots-game/ui/DotsGame";
 import { BackLink } from "@/FSD/shared/ui/back-link/BackLink";
 import { GamePageView } from "@/FSD/pages/game/ui/GamePageView";
-import { buildLocalizedMetadata } from "@/FSD/shared/lib/seo";
+import { buildLocalizedMetadata } from "@/FSD/shared/lib/seo/buildMetadata";
 import publicRoutes from "@/FSD/shared/lib/seo/publicRoutes.json";
 
 type GamePageProps = Readonly<{

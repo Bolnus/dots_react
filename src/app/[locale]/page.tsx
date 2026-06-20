@@ -3,7 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Metadata } from "next";
 
 import { GamesGrid } from "@/FSD/widgets/games-grid/ui/GamesGrid";
-import { buildLocalizedMetadata } from "@/FSD/shared/lib/seo";
+import { buildLocalizedMetadata } from "@/FSD/shared/lib/seo/buildMetadata";
 
 import styles from "./page.module.css";
 

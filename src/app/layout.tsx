@@ -4,7 +4,7 @@ import { getLocale } from "next-intl/server";
 import Script from "next/script";
 
 import "@/FSD/app/styles/globals.css";
-import { getSiteUrl } from "@/FSD/shared/lib/seo";
+import { getSiteUrl } from "@/FSD/shared/lib/seo/siteUrl";
 
 type RootLayoutProps = Readonly<{
   children: ReactNode;

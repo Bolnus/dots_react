@@ -9,6 +9,31 @@ import type { CreateRoomDraft, DraftFormState } from "./types";
 
 export const PLAYER_SLOTS = 2;
 
+/** Drops stale waiting-room WS snapshots that race with add-AI or drop a known AI player. */
+export function shouldApplyIncomingRoomSnapshot({
+  isAddingAi,
+  isPatching,
+  prev,
+  next
+}: Readonly<{
+  isAddingAi: boolean;
+  isPatching: boolean;
+  prev: DotsRoomDetail | null;
+  next: DotsRoomDetail;
+}>): boolean {
+  if (isAddingAi && next.players.length < PLAYER_SLOTS) {
+    return false;
+  }
+  if (isPatching || prev === null) {
+    return true;
+  }
+  const previousAi = prev.players.find((player) => player.user.isAi);
+  if (previousAi && !next.players.some((player) => player.user.userId === previousAi.user.userId)) {
+    return false;
+  }
+  return true;
+}
+
 type EffectiveConfigArgs = Readonly<{
   rows: number | undefined;
   cols: number | undefined;

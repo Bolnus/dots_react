@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { useTranslations } from "next-intl";
 
-import type { LeaveRoomRequest } from "../../../api/dotsOnlineApiTypes";
+import type { LeaveRoomRequest, DotsRoomDetail } from "../../../api/dotsOnlineApiTypes";
 import { useAddAiMutation } from "../../../api/useAddAiMutation";
 import { useLeaveRoomMutation } from "../../../api/useLeaveRoomMutation";
 import { useRoomLive } from "../../../api/useRoomLive";
@@ -13,7 +13,7 @@ import { defaultDotsConfig } from "../../../model/logic";
 
 import { DraftRoomSetupBody } from "./DraftRoomSetupBody";
 import { InRoomSetupBody } from "./InRoomSetupBody";
-import { submitDraft } from "./roomSetupUtils";
+import { shouldApplyIncomingRoomSnapshot, submitDraft } from "./roomSetupUtils";
 import type { DotsOnlineRoomSetupProps, DraftFormState } from "./types";
 import { SectionFetching } from "@/FSD/shared/ui/section-fetching/SectionFetching";
 
@@ -41,6 +41,11 @@ function requestLeave({
   leaveRoom({ roomId, request: { userId } });
 }
 
+type RoomSetupLiveGuardRefs = Readonly<{
+  isAddingAi: boolean;
+  isPatching: boolean;
+}>;
+
 /** Online configuration view: in draft mode shows "Create room"; in in-room mode shows roster + "Start game". */
 export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactElement {
   const t = useTranslations("DotsGame");
@@ -53,11 +58,27 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
   }));
 
   const { roomId, userId, isCreating = false, onBack, onGameStarted, onLeftRoom, onCreateRoom } = props;
-  const live = useRoomLive(roomId);
-  const { room } = live;
+  const liveGuardRefs = useRef<RoomSetupLiveGuardRefs>({ isAddingAi: false, isPatching: false });
+  const shouldApplyRoomEvent = useCallback(
+    (prev: DotsRoomDetail | null, next: DotsRoomDetail) =>
+      shouldApplyIncomingRoomSnapshot({
+        isAddingAi: liveGuardRefs.current.isAddingAi,
+        isPatching: liveGuardRefs.current.isPatching,
+        prev,
+        next
+      }),
+    []
+  );
+  const { room, applyRoomSnapshot } = useRoomLive(roomId, { shouldApplyRoomEvent });
 
   const { mutate: updateRoom, isPending: isPatching } = useUpdateRoomMutation();
-  const { mutate: addAi, isPending: isAddingAi } = useAddAiMutation();
+  const {
+    mutate: addAi,
+    isPending: isAddingAi,
+    isSuccess: didAddAiSucceed,
+    data: addAiResult,
+    reset: resetAddAi
+  } = useAddAiMutation();
   const {
     mutate: startGame,
     error: startMutationError,
@@ -71,6 +92,18 @@ export function DotsOnlineRoomSetup(props: DotsOnlineRoomSetupProps): ReactEleme
     isError: didLeaveFail,
     reset: resetLeave
   } = useLeaveRoomMutation();
+
+  useEffect(() => {
+    liveGuardRefs.current = { isAddingAi, isPatching };
+  }, [isAddingAi, isPatching]);
+
+  useEffect(() => {
+    if (!didAddAiSucceed || !addAiResult) {
+      return;
+    }
+    applyRoomSnapshot(addAiResult.room);
+    resetAddAi();
+  }, [didAddAiSucceed, addAiResult, applyRoomSnapshot, resetAddAi]);
 
   useEffect(() => {
     if (roomId && room && room.status === "playing") {

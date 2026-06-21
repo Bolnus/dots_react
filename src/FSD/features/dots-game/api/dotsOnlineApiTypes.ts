@@ -195,6 +195,12 @@ export type UseSendGameActionResult = Readonly<{
   sendEphemeral: (request: EphemeralActionRequest) => Promise<void>;
 }>;
 
+/** Options for `useRoomLive`. */
+export type UseRoomLiveOptions = Readonly<{
+  /** When false, the incoming WS snapshot is ignored (live state and cache unchanged). */
+  shouldApplyRoomEvent?: (prev: DotsRoomDetail | null, next: DotsRoomDetail) => boolean;
+}>;
+
 /** Result of `useRoomLive` — live room snapshot and connection state. */
 export type UseRoomLiveResult = Readonly<{
   room: DotsRoomDetail | null;

@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
-import type { DotsRoomDetail, DotsRoomEvent, UseRoomLiveResult } from "./dotsOnlineApiTypes";
+import type { DotsRoomDetail, DotsRoomEvent, UseRoomLiveOptions, UseRoomLiveResult } from "./dotsOnlineApiTypes";
 import { fetchRoom } from "./dotsApi";
 import { forceReconnectDotsRealtime, onDotsRealtimeConnectionChange, subscribeDotsRoom } from "./dotsRealtime";
 import { DOTS_QUERY_KEYS } from "./queryKeys";
 
 type RoomEventHandlerArgs = Readonly<{
   expectedRoomId: string;
-  setRoom: (room: DotsRoomDetail) => void;
+  setRoom: Dispatch<SetStateAction<DotsRoomDetail | null>>;
   setIsConnected: (value: boolean) => void;
   queryClient: QueryClient;
 }>;
@@ -18,30 +18,55 @@ type RoomEventHandlerArgs = Readonly<{
 type RoomResyncArgs = Readonly<{
   roomId: string;
   queryClient: QueryClient;
-  setRoom: (room: DotsRoomDetail) => void;
+  setRoom: Dispatch<SetStateAction<DotsRoomDetail | null>>;
   cancelledRef: Readonly<{ current: boolean }>;
 }>;
 
 type RoomResyncOnResumeArgs = Readonly<{
   roomId: string | null;
   queryClient: QueryClient;
-  setRoom: (room: DotsRoomDetail) => void;
+  setRoom: Dispatch<SetStateAction<DotsRoomDetail | null>>;
   cancelledRef: Readonly<{ current: boolean }>;
 }>;
 
+type MergeIncomingRoomSnapshotArgs = Readonly<{
+  prev: DotsRoomDetail | null;
+  next: DotsRoomDetail;
+  shouldApplyRoomEvent?: (prev: DotsRoomDetail | null, next: DotsRoomDetail) => boolean;
+  outcome: { applied: boolean };
+}>;
+
+/** Merges an incoming WS room snapshot into the current live state. */
+function mergeIncomingRoomSnapshot(args: MergeIncomingRoomSnapshotArgs): DotsRoomDetail | null {
+  if (args.shouldApplyRoomEvent && !args.shouldApplyRoomEvent(args.prev, args.next)) {
+    args.outcome.applied = false;
+    return args.prev;
+  }
+  args.outcome.applied = true;
+  return args.next;
+}
+
 /** Applies a realtime room event to local state and the query cache. */
-function onRoomEvent(event: DotsRoomEvent, args: RoomEventHandlerArgs): void {
+function onRoomEvent(
+  event: DotsRoomEvent,
+  args: RoomEventHandlerArgs,
+  shouldApplyRoomEvent?: (prev: DotsRoomDetail | null, next: DotsRoomDetail) => boolean
+): void {
   if (event.type === "CHAT_MESSAGE" || event.type === "CHAT_READ" || event.type === "CHAT_TYPING") {
     return;
   }
-  const { room } = event;
+  const { room: next } = event;
   const { expectedRoomId, setRoom, setIsConnected, queryClient } = args;
-  if (room.id !== expectedRoomId) {
+  if (next.id !== expectedRoomId) {
     return;
   }
-  setRoom(room);
+  const outcome = { applied: false };
+  setRoom((prev) => mergeIncomingRoomSnapshot({ prev, next, shouldApplyRoomEvent, outcome }));
+  if (!outcome.applied) {
+    return;
+  }
   setIsConnected(true);
-  queryClient.setQueryData(DOTS_QUERY_KEYS.room(room.id), room);
+  queryClient.setQueryData(DOTS_QUERY_KEYS.room(next.id), next);
 }
 
 /** Refetches authoritative room state and forces a WebSocket reconnect. */
@@ -86,11 +111,16 @@ function useRoomResyncOnResume(args: RoomResyncOnResumeArgs): void {
 }
 
 /** Subscribes to live updates for `roomId` and exposes the latest snapshot. */
-export function useRoomLive(roomId: string | null): UseRoomLiveResult {
+export function useRoomLive(roomId: string | null, options?: UseRoomLiveOptions): UseRoomLiveResult {
   const [room, setRoom] = useState<DotsRoomDetail | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
   const cancelledRef = useRef(false);
+  const shouldApplyRoomEventRef = useRef(options?.shouldApplyRoomEvent);
+
+  useEffect(() => {
+    shouldApplyRoomEventRef.current = options?.shouldApplyRoomEvent;
+  }, [options?.shouldApplyRoomEvent]);
 
   const applyRoomSnapshot = useCallback(
     (snapshot: DotsRoomDetail): void => {
@@ -138,7 +168,9 @@ export function useRoomLive(roomId: string | null): UseRoomLiveResult {
       setIsConnected,
       queryClient
     };
-    const unsubscribeRoom = subscribeDotsRoom(roomId, (event) => onRoomEvent(event, args));
+    const unsubscribeRoom = subscribeDotsRoom(roomId, (event) =>
+      onRoomEvent(event, args, shouldApplyRoomEventRef.current)
+    );
     const unsubscribeConnection = onDotsRealtimeConnectionChange(setIsConnected);
 
     return () => {

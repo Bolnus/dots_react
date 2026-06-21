@@ -12,14 +12,15 @@ type UseAddAiMutationResult = Readonly<{
   error: Error | null;
   reset: () => void;
   isPending: boolean;
+  isSuccess: boolean;
 }>;
 
 /** Mutation hook that adds an AI player to the second slot in a waiting room. */
 export function useAddAiMutation(): UseAddAiMutationResult {
   const queryClient = useQueryClient();
-  const { mutate, data, error, reset, isPending } = useMutation<AddAiResult, Error, string>({
+  const { mutate, data, error, reset, isPending, isSuccess } = useMutation<AddAiResult, Error, string>({
     mutationFn: (roomId) => addAiPlayer(roomId),
     onSuccess: (result) => syncRoomToCache(queryClient, result.room)
   });
-  return { mutate, data, error, reset, isPending };
+  return { mutate, data, error, reset, isPending, isSuccess };
 }

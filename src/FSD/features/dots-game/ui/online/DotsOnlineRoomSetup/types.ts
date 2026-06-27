@@ -24,3 +24,13 @@ export type DraftFormState = Readonly<{
   cols: number | undefined;
   password: string;
 }>;
+
+/** In-flight room-setup mutation that can race with WS snapshots. */
+export const RoomSetupMutation = {
+  Idle: "idle",
+  AddingAi: "addingAi",
+  Patching: "patching",
+  Starting: "starting"
+} as const;
+
+export type RoomSetupMutation = (typeof RoomSetupMutation)[keyof typeof RoomSetupMutation];

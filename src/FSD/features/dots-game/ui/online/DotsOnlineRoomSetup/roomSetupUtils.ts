@@ -5,30 +5,59 @@ import { isValidGridDimension, persistDefaultGridDimensions } from "../../../mod
 import type { DotsGameConfig, PlayerId } from "../../../model/types";
 import type { RosterUser } from "../../roster/RosterPanel";
 
-import type { CreateRoomDraft, DraftFormState } from "./types";
+import { RoomSetupMutation, type CreateRoomDraft, type DraftFormState } from "./types";
 
 export const PLAYER_SLOTS = 2;
 
-/** Drops stale waiting-room WS snapshots that race with add-AI or drop a known AI player. */
-export function shouldApplyIncomingRoomSnapshot({
+/** Resolves which setup mutation is in flight; at most one is pending at a time. */
+export function resolveRoomSetupMutation({
   isAddingAi,
   isPatching,
-  prev,
-  next
+  isStarting
 }: Readonly<{
   isAddingAi: boolean;
   isPatching: boolean;
+  isStarting: boolean;
+}>): RoomSetupMutation {
+  if (isAddingAi) {
+    return RoomSetupMutation.AddingAi;
+  }
+  if (isPatching) {
+    return RoomSetupMutation.Patching;
+  }
+  if (isStarting) {
+    return RoomSetupMutation.Starting;
+  }
+  return RoomSetupMutation.Idle;
+}
+
+/** Drops stale waiting-room WS snapshots that race with in-flight setup mutations. */
+export function shouldApplyIncomingRoomSnapshot({
+  pendingMutation,
+  prev,
+  next
+}: Readonly<{
+  pendingMutation: RoomSetupMutation;
   prev: DotsRoomDetail | null;
   next: DotsRoomDetail;
 }>): boolean {
-  if (isAddingAi && next.players.length < PLAYER_SLOTS) {
+  if (prev === null) {
+    return true;
+  }
+  if (pendingMutation === RoomSetupMutation.AddingAi && next.players.length < PLAYER_SLOTS) {
     return false;
   }
-  if (isPatching || prev === null) {
-    return true;
+  if (pendingMutation === RoomSetupMutation.Starting && next.status === "waiting") {
+    return false;
+  }
+  if (prev.status === "playing" && next.status === "waiting") {
+    return false;
   }
   const previousAi = prev.players.find((player) => player.user.isAi);
   if (previousAi && !next.players.some((player) => player.user.userId === previousAi.user.userId)) {
+    return false;
+  }
+  if (pendingMutation === RoomSetupMutation.Patching && next.players.length < prev.players.length) {
     return false;
   }
   return true;

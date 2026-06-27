@@ -151,7 +151,7 @@ export function DotsOnlineSetup({ onBackToLobby }: DotsOnlineSetupProps): ReactE
     );
   } else {
     const play = (
-      <DotsOnlinePlay room={activeRoom} userId={identity.userId} onExit={() => exitGame({ view, setView })} />
+      <DotsOnlinePlay roomId={view.roomId} userId={identity.userId} onExit={() => exitGame({ view, setView })} />
     );
     content = portalRoot ? createPortal(<div className={styles.playPortalRoot}>{play}</div>, portalRoot) : play;
   }

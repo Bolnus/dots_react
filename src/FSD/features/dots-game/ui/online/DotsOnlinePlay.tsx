@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type { DotsRoomDetail } from "../../api/dotsOnlineApiTypes";
+import { shouldApplyIncomingPlayRoomSnapshot } from "../../api/roomSnapshotGuards";
 import { dispatchDotsApiError } from "../../api/useDotsApiErrors";
 import { useRoomChat } from "../../api/useRoomChat";
 import { useRoomLive } from "../../api/useRoomLive";
@@ -20,9 +21,10 @@ import { RoomChatPanel } from "../chat/RoomChatPanel";
 import { DotsBoardView } from "../play/DotsBoardView";
 import styles from "./DotsOnlinePlay.module.css";
 import { useMediaMinWidth } from "@/FSD/shared/lib/hooks/useMediaMinWidth";
+import { SectionFetching } from "@/FSD/shared/ui/section-fetching/SectionFetching";
 
 export type DotsOnlinePlayProps = Readonly<{
-  room: DotsRoomDetail;
+  roomId: string;
   userId: string;
   onExit: () => void;
 }>;
@@ -120,13 +122,49 @@ function resolveTabNavCallbacks(
 }
 
 /** Online play wrapper: drives `DotsBoardView` with an owned board/chat tab layout. */
-export function DotsOnlinePlay({ room: initialRoom, userId, onExit }: DotsOnlinePlayProps): ReactElement {
+export function DotsOnlinePlay({ roomId, userId, onExit }: DotsOnlinePlayProps): ReactElement {
+  const t = useTranslations("DotsGame");
+  const shouldApplyRoomEvent = useCallback(
+    (prev: DotsRoomDetail | null, next: DotsRoomDetail) => shouldApplyIncomingPlayRoomSnapshot(prev, next),
+    []
+  );
+  const { room, isConnected, applyRoomSnapshot } = useRoomLive(roomId, { shouldApplyRoomEvent });
+
+  if (!room) {
+    return <SectionFetching label={t("connectingToRoom")} />;
+  }
+
+  return (
+    <DotsOnlinePlayBody
+      room={room}
+      userId={userId}
+      onExit={onExit}
+      isConnected={isConnected}
+      applyRoomSnapshot={applyRoomSnapshot}
+    />
+  );
+}
+
+type DotsOnlinePlayBodyProps = Readonly<{
+  room: DotsRoomDetail;
+  userId: string;
+  onExit: () => void;
+  isConnected: boolean;
+  applyRoomSnapshot: (snapshot: DotsRoomDetail) => void;
+}>;
+
+/** Renders the board and chat panels once the live room snapshot is available. */
+function DotsOnlinePlayBody({
+  room,
+  userId,
+  onExit,
+  isConnected,
+  applyRoomSnapshot
+}: DotsOnlinePlayBodyProps): ReactElement {
   const t = useTranslations("DotsGame");
   const isWide = useMediaMinWidth(LAYOUT_BREAKPOINT_PX);
   const [activeTab, setActiveTab] = useState<ActiveTab>("primary");
   const isSecondaryVisible = isWide || activeTab === "secondary";
-  const { room: liveRoom, isConnected, applyRoomSnapshot } = useRoomLive(initialRoom.id);
-  const room = liveRoom ?? initialRoom;
   const send = useSendGameAction(room.id);
   const onCommitRejected = useCallback(
     (result: CommitRejectedResult): void => {

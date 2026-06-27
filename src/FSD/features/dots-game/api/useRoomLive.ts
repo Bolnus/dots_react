@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import type { DotsRoomDetail, DotsRoomEvent, UseRoomLiveOptions, UseRoomLiveResult } from "./dotsOnlineApiTypes";
 import { fetchRoom } from "./dotsApi";
@@ -10,7 +10,6 @@ import { DOTS_QUERY_KEYS } from "./queryKeys";
 
 type RoomEventHandlerArgs = Readonly<{
   expectedRoomId: string;
-  setRoom: Dispatch<SetStateAction<DotsRoomDetail | null>>;
   setIsConnected: (value: boolean) => void;
   queryClient: QueryClient;
 }>;
@@ -18,15 +17,11 @@ type RoomEventHandlerArgs = Readonly<{
 type RoomResyncArgs = Readonly<{
   roomId: string;
   queryClient: QueryClient;
-  setRoom: Dispatch<SetStateAction<DotsRoomDetail | null>>;
-  cancelledRef: Readonly<{ current: boolean }>;
 }>;
 
 type RoomResyncOnResumeArgs = Readonly<{
   roomId: string | null;
   queryClient: QueryClient;
-  setRoom: Dispatch<SetStateAction<DotsRoomDetail | null>>;
-  cancelledRef: Readonly<{ current: boolean }>;
 }>;
 
 type MergeIncomingRoomSnapshotArgs = Readonly<{
@@ -36,17 +31,17 @@ type MergeIncomingRoomSnapshotArgs = Readonly<{
   outcome: { applied: boolean };
 }>;
 
-/** Merges an incoming WS room snapshot into the current live state. */
-function mergeIncomingRoomSnapshot(args: MergeIncomingRoomSnapshotArgs): DotsRoomDetail | null {
+/** Merges an incoming WS room snapshot into the query cache. */
+function mergeIncomingRoomSnapshot(args: MergeIncomingRoomSnapshotArgs): DotsRoomDetail | undefined {
   if (args.shouldApplyRoomEvent && !args.shouldApplyRoomEvent(args.prev, args.next)) {
     args.outcome.applied = false;
-    return args.prev;
+    return args.prev ?? undefined;
   }
   args.outcome.applied = true;
   return args.next;
 }
 
-/** Applies a realtime room event to local state and the query cache. */
+/** Applies a realtime room event to the query cache. */
 function onRoomEvent(
   event: DotsRoomEvent,
   args: RoomEventHandlerArgs,
@@ -56,28 +51,27 @@ function onRoomEvent(
     return;
   }
   const { room: next } = event;
-  const { expectedRoomId, setRoom, setIsConnected, queryClient } = args;
+  const { expectedRoomId, setIsConnected, queryClient } = args;
   if (next.id !== expectedRoomId) {
     return;
   }
   const outcome = { applied: false };
-  setRoom((prev) => mergeIncomingRoomSnapshot({ prev, next, shouldApplyRoomEvent, outcome }));
+  queryClient.setQueryData<DotsRoomDetail>(DOTS_QUERY_KEYS.room(next.id), (prev) =>
+    mergeIncomingRoomSnapshot({ prev: prev ?? null, next, shouldApplyRoomEvent, outcome })
+  );
   if (!outcome.applied) {
     return;
   }
   setIsConnected(true);
-  queryClient.setQueryData(DOTS_QUERY_KEYS.room(next.id), next);
 }
 
 /** Refetches authoritative room state and forces a WebSocket reconnect. */
 function resyncRoomLive(args: RoomResyncArgs): void {
-  void args.queryClient
-    .fetchQuery({ queryKey: DOTS_QUERY_KEYS.room(args.roomId), queryFn: () => fetchRoom(args.roomId) })
-    .then((snapshot) => {
-      if (!args.cancelledRef.current) {
-        args.setRoom(snapshot);
-      }
-    });
+  void args.queryClient.fetchQuery({
+    queryKey: DOTS_QUERY_KEYS.room(args.roomId),
+    queryFn: () => fetchRoom(args.roomId),
+    staleTime: Number.POSITIVE_INFINITY
+  });
   forceReconnectDotsRealtime();
 }
 
@@ -91,12 +85,12 @@ function onDocumentVisible(args: RoomResyncArgs): void {
 
 /** Registers visibility and online listeners to resync room state on resume. */
 function useRoomResyncOnResume(args: RoomResyncOnResumeArgs): void {
-  const { roomId, queryClient, setRoom, cancelledRef } = args;
+  const { roomId, queryClient } = args;
   useEffect(() => {
     if (!roomId) {
       return undefined;
     }
-    const resyncArgs: RoomResyncArgs = { roomId, queryClient, setRoom, cancelledRef };
+    const resyncArgs: RoomResyncArgs = { roomId, queryClient };
 
     const onVisibilityChange = (): void => onDocumentVisible(resyncArgs);
     const onOnline = (): void => resyncRoomLive(resyncArgs);
@@ -107,27 +101,31 @@ function useRoomResyncOnResume(args: RoomResyncOnResumeArgs): void {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("online", onOnline);
     };
-  }, [roomId, queryClient, setRoom, cancelledRef]);
+  }, [roomId, queryClient]);
 }
 
-/** Subscribes to live updates for `roomId` and exposes the latest snapshot. */
+/** Subscribes to live updates for `roomId` and exposes the latest snapshot from the query cache. */
 export function useRoomLive(roomId: string | null, options?: UseRoomLiveOptions): UseRoomLiveResult {
-  const [room, setRoom] = useState<DotsRoomDetail | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
-  const cancelledRef = useRef(false);
   const shouldApplyRoomEventRef = useRef(options?.shouldApplyRoomEvent);
 
   useEffect(() => {
     shouldApplyRoomEventRef.current = options?.shouldApplyRoomEvent;
   }, [options?.shouldApplyRoomEvent]);
 
+  const { data: room } = useQuery({
+    queryKey: DOTS_QUERY_KEYS.room(roomId ?? "__none__"),
+    queryFn: () => fetchRoom(roomId!),
+    enabled: roomId !== null,
+    staleTime: Number.POSITIVE_INFINITY
+  });
+
   const applyRoomSnapshot = useCallback(
     (snapshot: DotsRoomDetail): void => {
       if (!roomId || snapshot.id !== roomId) {
         return;
       }
-      setRoom(snapshot);
       queryClient.setQueryData(DOTS_QUERY_KEYS.room(snapshot.id), snapshot);
     },
     [roomId, queryClient]
@@ -135,36 +133,14 @@ export function useRoomLive(roomId: string | null, options?: UseRoomLiveOptions)
 
   useEffect(() => {
     if (!roomId) {
-      setRoom(null);
       setIsConnected(false);
       return undefined;
     }
 
-    cancelledRef.current = false;
-
-    const cached = queryClient.getQueryData<DotsRoomDetail>(DOTS_QUERY_KEYS.room(roomId));
-    setRoom(cached ?? null);
     setIsConnected(false);
-
-    if (!cached) {
-      void queryClient
-        .fetchQuery({
-          queryKey: DOTS_QUERY_KEYS.room(roomId),
-          queryFn: () => fetchRoom(roomId)
-        })
-        .then((snapshot) => {
-          if (!cancelledRef.current) {
-            setRoom(snapshot);
-          }
-        })
-        .catch(() => {
-          /* HTTP errors surface via the global API error modal */
-        });
-    }
 
     const args: RoomEventHandlerArgs = {
       expectedRoomId: roomId,
-      setRoom,
       setIsConnected,
       queryClient
     };
@@ -174,14 +150,13 @@ export function useRoomLive(roomId: string | null, options?: UseRoomLiveOptions)
     const unsubscribeConnection = onDotsRealtimeConnectionChange(setIsConnected);
 
     return () => {
-      cancelledRef.current = true;
       unsubscribeRoom();
       unsubscribeConnection();
       setIsConnected(false);
     };
   }, [roomId, queryClient]);
 
-  useRoomResyncOnResume({ roomId, queryClient, setRoom, cancelledRef });
+  useRoomResyncOnResume({ roomId, queryClient });
 
-  return { room, isConnected, applyRoomSnapshot };
+  return { room: room ?? null, isConnected, applyRoomSnapshot };
 }

@@ -205,6 +205,6 @@ export type UseRoomLiveOptions = Readonly<{
 export type UseRoomLiveResult = Readonly<{
   room: DotsRoomDetail | null;
   isConnected: boolean;
-  /** Applies an authoritative room snapshot (e.g. after a rejected commit). */
+  /** Applies an authoritative room snapshot into the query cache (e.g. after a rejected commit). */
   applyRoomSnapshot: (snapshot: DotsRoomDetail) => void;
 }>;

@@ -12,10 +12,10 @@ import { DotsGamePlay } from "../../play/DotsGamePlay";
 import { DotsGameStartButton } from "../../play/DotsGameStartButton";
 import { PlayersRosterPanel } from "../../roster/PlayersRosterPanel";
 import { RosterPanel, RostersGrid } from "../../roster/RosterPanel";
-import { buildEffectiveConfig } from "./roomSetupUtils";
+import { buildEffectiveConfig, buildPlayerLabels, PLAYER_SLOTS } from "./roomSetupUtils";
 import { GridSizeFields } from "./GridSizeFields";
 import styles from "./InRoomSetupBody.module.css";
-import { buildPlayerLabels, PLAYER_SLOTS } from "./roomSetupUtils";
+import { RoomSetupMutation } from "./types";
 import { BackButton } from "@/FSD/shared/ui/back-button/BackButton";
 
 type InRoomSetupBodyProps = Readonly<{
@@ -23,8 +23,7 @@ type InRoomSetupBodyProps = Readonly<{
   userId: string;
   defaults: DotsGameConfig;
   isLeaving?: boolean;
-  isStarting?: boolean;
-  isPatching?: boolean;
+  pendingMutation?: (typeof RoomSetupMutation)[keyof typeof RoomSetupMutation];
   onBack: () => void;
   onStart: () => void;
   onPatch: (
@@ -32,7 +31,6 @@ type InRoomSetupBodyProps = Readonly<{
   ) => void;
   onKick: (kickUserId: string) => void;
   onAddAi: () => void;
-  isAddingAi?: boolean;
 }>;
 
 /** In-room mode renderer: live-updates from `useRoomLive`; owner-only fields propagate to the server. */
@@ -41,14 +39,12 @@ export function InRoomSetupBody({
   userId,
   defaults,
   isLeaving = false,
-  isStarting = false,
-  isPatching = false,
+  pendingMutation = RoomSetupMutation.Idle,
   onBack,
   onStart,
   onPatch,
   onKick,
-  onAddAi,
-  isAddingAi = false
+  onAddAi
 }: InRoomSetupBodyProps): ReactElement {
   const t = useTranslations("DotsGame");
   const isOwner = room.ownerUserId === userId;
@@ -58,7 +54,7 @@ export function InRoomSetupBody({
   );
   const playerLabels = useMemo(() => buildPlayerLabels(room, t), [room, t]);
   const canStart = isOwner && room.players.length === PLAYER_SLOTS;
-  const fieldsDisabled = !isOwner || isPatching;
+  const fieldsDisabled = !isOwner || pendingMutation === RoomSetupMutation.Patching;
 
   return (
     <div className={styles.setup}>
@@ -91,7 +87,7 @@ export function InRoomSetupBody({
           ownerUserId={room.ownerUserId}
           canKick={isOwner}
           canAddAi={isOwner}
-          isAddingAi={isAddingAi}
+          isAddingAi={pendingMutation === RoomSetupMutation.AddingAi}
           onKick={onKick}
           onAddAi={onAddAi}
         />
@@ -106,7 +102,11 @@ export function InRoomSetupBody({
       {isOwner && !canStart ? <p className={styles.ownerHint}>{t("notEnoughPlayers")}</p> : null}
       <div className={styles.actions}>
         {isOwner ? (
-          <DotsGameStartButton onClick={onStart} disabled={!canStart} isLoading={isStarting}>
+          <DotsGameStartButton
+            onClick={onStart}
+            disabled={!canStart}
+            isLoading={pendingMutation === RoomSetupMutation.Starting}
+          >
             {t("startGame")}
           </DotsGameStartButton>
         ) : null}

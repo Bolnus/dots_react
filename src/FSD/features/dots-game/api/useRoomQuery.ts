@@ -13,20 +13,13 @@ type UseRoomQueryResult = Readonly<{
   isError: boolean;
 }>;
 
-/** Reads the room snapshot for `roomId`; disabled when `roomId` is null. */
-function fetchRoomById(roomId: string | null): Promise<DotsRoomDetail> {
-  if (!roomId) {
-    throw new Error("roomId is required");
-  }
-  return fetchRoom(roomId);
-}
-
 /** Snapshot fetch for a single room; the live channel keeps it fresh after mount. */
 export function useRoomQuery(roomId: string | null): UseRoomQueryResult {
   const { data, error, isLoading, isError } = useQuery<DotsRoomDetail, Error>({
-    queryKey: roomId ? DOTS_QUERY_KEYS.room(roomId) : DOTS_QUERY_KEYS.room("__none__"),
-    queryFn: () => fetchRoomById(roomId),
-    enabled: roomId !== null
+    queryKey: DOTS_QUERY_KEYS.room(roomId ?? "__none__"),
+    queryFn: () => fetchRoom(roomId!),
+    enabled: roomId !== null,
+    staleTime: Number.POSITIVE_INFINITY
   });
   return { data, error, isLoading, isError };
 }
